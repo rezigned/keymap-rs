@@ -1,0 +1,7 @@
+/target
+Cargo.lock
+.DS_Store
+
+# Devenv
+.devenv*
+devenv.local.nix

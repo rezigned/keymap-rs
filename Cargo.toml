@@ -1,0 +1,32 @@
+[package]
+name = "keymap"
+description = "A library for defining and parsing input events from configuration"
+authors = ["Marut Khumtong <code@rezigned.com>"]
+version = "0.1.0"
+homepage = "https://github.com/rezigned/keymap-rs"
+repository = "https://github.com/rezigned/keymap-rs"
+edition = "2021"
+keywords = ["terminal", "event", "config", "keymapping", "keybinding"]
+license = "MIT"
+
+[dependencies]
+crossterm = { version = "0.26", optional = true }
+termion = { version = "2.0", optional = true }
+pom = "3.3.0"
+serde = { version = "1.0", features = ["derive"] }
+strum = "0.25"
+strum_macros = "0.25"
+
+[features]
+default = ["crossterm"]
+
+[dev-dependencies]
+toml = "0.7"
+
+[[example]]
+name = "crossterm"
+required-features = ["crossterm"]
+
+[[example]]
+name = "termion"
+required-features = ["termion"]
