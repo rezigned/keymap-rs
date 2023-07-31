@@ -1,7 +1,7 @@
 mod config;
 
 use config::{CONFIG_DATA, Config, Action};
-use keymap::Key;
+use keymap::KeyMap;
 use termion::event::Event;
 use termion::input::{TermRead, MouseTerminal};
 use termion::raw::IntoRawMode;
@@ -20,7 +20,7 @@ fn main() {
         let evt = c.unwrap();
 
         if let Event::Key(key) = evt {
-            if let Some((k, action)) = bindings.keys.get_key_value(&Key::from(key)) {
+            if let Some((k, action)) = bindings.keys.get_key_value(&KeyMap::from(key)) {
                 if *action == Action::Quit {
                     break;
                 }
