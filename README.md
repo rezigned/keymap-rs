@@ -4,7 +4,7 @@
 [![Rust](https://github.com/rezigned/keymap-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/rezigned/keymap-rs/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
 
-`keymap-rs` is a library for defining input events from configurations and mapping them to the terminal library's event. (such as [crossterm](https://github.com/crossterm-rs/crossterm) or [termion](https://gitlab.redox-os.org/redox-os/termion))
+`keymap-rs` is a library for parsing terminal input event from configurations and mapping them to the terminal library's event. (such as [crossterm](https://github.com/crossterm-rs/crossterm) or [termion](https://gitlab.redox-os.org/redox-os/termion))
 
 ## Getting started
 
@@ -24,7 +24,7 @@ keymap = "0.1"
 Let's started by defining a simple structure for mapping input key to `String`.
 
 ```rs
-use keymap::{KeyMap, Key};
+use keymap::KeyMap;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
@@ -47,7 +47,7 @@ let mapping: Config = toml::from_str(config).unwrap();
 // Read input event
 match read()? {
     Event::Key(key) => {
-        // `Key::from` will convert `crossterm::event::KeyEvent` to `keymap::Key`
+        // `KeyMap::from` will convert `crossterm::event::KeyEvent` to `keymap::KeyMap`
         if let Some(action) = config.0.get(&Key::from(key)) {
             match action {
                 "Up" => println!("Move up!"),

@@ -9,7 +9,7 @@ use crossterm::{
     style::Print,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
-use keymap::Key;
+use keymap::KeyMap;
 
 fn main() -> io::Result<()> {
     let mut stdout = io::stdout();
@@ -28,7 +28,7 @@ fn read_event(stdout: &mut Stdout) -> io::Result<()> {
 
         match event {
             Event::Key(key) => {
-                if let Some((k, action)) = config.0.get_key_value(&Key::from(key)) {
+                if let Some((k, action)) = config.0.get_key_value(&KeyMap::from(key)) {
                     if *action == Action::Quit {
                         break;
                     }

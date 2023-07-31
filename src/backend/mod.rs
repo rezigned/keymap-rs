@@ -1,7 +1,7 @@
+use std::{hash::{Hasher, Hash}, fmt::{Display, self}};
+
 #[cfg(feature = "crossterm")]
 mod crossterm;
-
-use std::{hash::{Hasher, Hash}, fmt::{Display, self}};
 
 #[cfg(feature = "crossterm")]
 pub use self::crossterm::KeyMap;
