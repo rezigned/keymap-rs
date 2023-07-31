@@ -2,7 +2,7 @@
 name = "keymap"
 description = "A library for defining and parsing input events from configuration"
 authors = ["Marut Khumtong <code@rezigned.com>"]
-version = "0.1.0"
+version = "0.1.1"
 homepage = "https://github.com/rezigned/keymap-rs"
 repository = "https://github.com/rezigned/keymap-rs"
 edition = "2021"
