@@ -1,6 +1,6 @@
 [package]
 name = "keymap"
-description = "A library for defining and parsing input events from configuration"
+description = "A library for parsing terminal input events from configuration"
 authors = ["Marut Khumtong <code@rezigned.com>"]
 version = "0.1.1"
 homepage = "https://github.com/rezigned/keymap-rs"

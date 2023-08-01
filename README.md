@@ -8,9 +8,9 @@
 
 ## Introduction
 
-Using terminal library's input event directly is sometimes not flexible. Let consider the following example of matching `ctrl-z` event:
+Using terminal library's input event directly is sometimes not ideal. Let consider the following example of matching `ctrl-z` event:
 
-```rs
+```rust
 match read() {
     // `ctrl-z`
     Event::Key(KeyEvent {
@@ -21,7 +21,7 @@ match read() {
 }
 ```
 
-This code works perfectly fine. But it will prevent us from remapping the action to different input event. For example, if we want the end users to customize the key mappings to a different one (e.g. `ctrl-x`, `shift-c`, etc.).
+This code works perfectly fine. But if we want the end users to customize the key mappings to a different one (e.g. `ctrl-x`, `shift-c`, etc.). How can we achieve that? The answer is `keymap`.
 
 `keymap` provides flexibility by allowing developers to define input event in plain-text, which can be used in any configuration formats (e.g. `yaml`, `toml`, etc.) and convert them to the terminal's event.
 
@@ -49,26 +49,24 @@ keymap = "0.1"
 
 Let's started by defining a simple structure for mapping input key to `String`.
 
-```rs
+```rust
 use keymap::KeyMap;
 use serde::Deserialize;
 
 #[derive(Deserialize)]
 struct Config(pub HashMap<KeyMap, String>)
 
-let config = r#"
-up   = "Up"
-down = "Down"
-g    = "Top"
-G    = "Bottom" # This is the same as `shift-g`
-esc  = "Quit"
-"
+const CONFIG: &str = r#"
+up     = "Up"
+down   = "Down"
+ctrl-c = "Quit"
+"#;
 ```
 
 Then in your terminal library of choice (we'll be using [crossterm](https://github.com/crossterm-rs/crossterm) here). You can use any deserializer (e.g. `toml`, `json`, etc.) to deserialize a key from the configuration above into the terminal library's event (e.g. `crossterm::event::KeyEvent`).
 
-```rs
-let mapping: Config = toml::from_str(config).unwrap();
+```rust
+let mapping: Config = toml::from_str(CONFIG).unwrap();
 
 // Read input event
 match read()? {
@@ -85,3 +83,8 @@ match read()? {
     }
 }
 ```
+
+### Supported Terminal Libraries
+
+* [crossterm](https://github.com/crossterm-rs/crossterm)
+* [termion](https://gitlab.redox-os.org/redox-os/termion)
