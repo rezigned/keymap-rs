@@ -1,3 +1,7 @@
+//! # Parser
+//!
+//! The `parser` module provides functionality for parsing terminal input events from plain-text.
+//!
 use std::fmt::{Display, Formatter};
 use std::str;
 use std::{fmt::Debug, str::FromStr};

@@ -1,3 +1,4 @@
+//! # Backends
 use std::{hash::{Hasher, Hash}, fmt::{Display, self}};
 
 #[cfg(feature = "crossterm")]
