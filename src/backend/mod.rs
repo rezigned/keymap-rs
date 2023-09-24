@@ -5,13 +5,13 @@ use std::{hash::{Hasher, Hash}, fmt::{Display, self}};
 mod crossterm;
 
 #[cfg(feature = "crossterm")]
-pub use self::crossterm::KeyMap;
+pub use self::crossterm::{KeyMap, parse};
 
 #[cfg(feature = "termion")]
 mod termion;
 
 #[cfg(feature = "termion")]
-pub use self::termion::KeyMap;
+pub use self::termion::{KeyMap, parse};
 
 use crate::parser::Node;
 

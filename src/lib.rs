@@ -3,4 +3,4 @@
 pub mod backend;
 pub mod parser;
 
-pub use backend::{KeyMap, Key};
+pub use backend::{KeyMap, Key, parse};
