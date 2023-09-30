@@ -1,34 +1,36 @@
 mod config;
+mod termion_utils;
 
-use config::{CONFIG_DATA, Config, Action};
+use std::io::{stdin, Write};
+
+use config::{Action, parse_config};
 use keymap::KeyMap;
 use termion::event::Event;
-use termion::input::{TermRead, MouseTerminal};
-use termion::raw::IntoRawMode;
-use std::io::{Write, stdout, stdin};
+use termion::input::TermRead;
+use termion_utils::{output, print, Result};
 
-fn main() {
+fn main() -> Result {
     let stdin = stdin();
-    let mut stdout = MouseTerminal::from(stdout().into_raw_mode().unwrap());
+    let mut stdout = output();
+    let bindings = parse_config();
 
-    stdout.flush().unwrap();
+    for event in stdin.events() {
+        if let Event::Key(key) = event? {
+            let mut send = |s: &str| print(&mut stdout, s);
 
-    // Parse key event
-    let bindings: Config = toml::from_str(CONFIG_DATA).unwrap();
-
-    for c in stdin.events() {
-        let evt = c.unwrap();
-
-        if let Event::Key(key) = evt {
-            if let Some((k, action)) = bindings.0.get_key_value(&KeyMap::from(key)) {
-                if *action == Action::Quit {
-                    break;
+            match bindings.0.get_key_value(&KeyMap::from(key)) {
+                Some((key, action)) => {
+                    if *action == Action::Quit {
+                        break;
+                    }
+                    send(&format!("{key}"))
                 }
-
-                write!(stdout, "{}{}key:{k} - {}", termion::clear::All, termion::cursor::Goto(1, 1), action).unwrap();
+                None => send(&format!("{key:?}")),
             }
         }
 
         stdout.flush().unwrap();
     }
+
+    Ok(())
 }

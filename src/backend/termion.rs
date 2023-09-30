@@ -29,6 +29,7 @@ impl From<KeyEvent> for Node {
             KeyEvent::Delete => (Keys::Delete, 0),
             KeyEvent::Down => (Keys::Down, 0),
             KeyEvent::End => (Keys::End, 0),
+            KeyEvent::Char('\n') => (Keys::Enter, 0),
             KeyEvent::Esc => (Keys::Esc, 0),
             KeyEvent::Home => (Keys::Home, 0),
             KeyEvent::F(n) => (Keys::F(n), 0),
@@ -37,14 +38,14 @@ impl From<KeyEvent> for Node {
             KeyEvent::PageDown => (Keys::PageDown, 0),
             KeyEvent::PageUp => (Keys::PageUp, 0),
             KeyEvent::Right => (Keys::Right, 0),
-            KeyEvent::Up => (Keys::Up, 0),
             KeyEvent::Char(' ') => (Keys::Space, 0),
-            KeyEvent::Char('\n') => (Keys::Enter, 0),
             KeyEvent::Char('\t') => (Keys::Tab, 0),
+            KeyEvent::Up => (Keys::Up, 0),
             KeyEvent::Char(c) => (Keys::Char(c), 0),
             KeyEvent::Alt(c) => (Keys::Char(c), Modifier::Alt as u8),
             KeyEvent::Ctrl(c) => (Keys::Char(c), Modifier::Ctrl as u8),
-            key => panic!("Unsupport Key {key:?}"),
+            KeyEvent::Null => (Keys::Tab, 0),
+            key => panic!("Unsupport KeyEvent {key:?}"),
         };
 
         Self { key, modifiers }
@@ -56,7 +57,6 @@ impl From<Node> for KeyMap {
         let key = match node.key {
             Keys::BackTab => KeyEvent::BackTab,
             Keys::Backspace => KeyEvent::Backspace,
-            Keys::Char(c) => KeyEvent::Char(c),
             Keys::Delete => KeyEvent::Delete,
             Keys::Down => KeyEvent::Down,
             Keys::End => KeyEvent::End,
@@ -72,6 +72,7 @@ impl From<Node> for KeyMap {
             Keys::Space => KeyEvent::Char(' '),
             Keys::Tab => KeyEvent::Char('\t'),
             Keys::Up => KeyEvent::Up,
+            Keys::Char(c) => KeyEvent::Char(c),
         };
 
         // Termion only allows modifier + char.

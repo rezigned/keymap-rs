@@ -1,48 +1,40 @@
-use std::io::{self, Stdout};
+use std::io;
 mod config;
+mod crossterm_utils;
 
-use config::{Action, Config, CONFIG_DATA};
+use config::{parse_config, Action};
 use crossterm::{
-    cursor,
     event::{read, Event},
-    execute,
-    style::Print,
     terminal::{disable_raw_mode, enable_raw_mode},
 };
+use crossterm_utils::output;
 use keymap::KeyMap;
 
 fn main() -> io::Result<()> {
-    let mut stdout = io::stdout();
     enable_raw_mode()?;
 
-    read_event(&mut stdout)?;
-
-    disable_raw_mode()
-}
-
-fn read_event(stdout: &mut Stdout) -> io::Result<()> {
-    let config: Config = toml::from_str(CONFIG_DATA).unwrap();
+    let mut send = output();
+    let config = parse_config();
 
     loop {
         let event = read()?;
 
         match event {
             Event::Key(key) => {
-                if let Some((k, action)) = config.0.get_key_value(&KeyMap::from(key)) {
-                    if *action == Action::Quit {
-                        break;
+                if let Some((_, action)) = config.0.get_key_value(&KeyMap::from(key)) {
+                    match action {
+                        Action::Up => send("Up!")?,
+                        Action::Down => send("Down!")?,
+                        Action::Jump => send("Jump!")?,
+                        Action::Left => send("Left!")?,
+                        Action::Right => send("Right!")?,
+                        Action::Quit => break,
                     }
-
-                    execute!(
-                        stdout,
-                        Print(format!("key:{} - {}\n", k, action)),
-                        cursor::MoveToNextLine(1),
-                    )?;
                 }
             }
             _ => (),
         }
     }
 
-    Ok(())
+    disable_raw_mode()
 }
