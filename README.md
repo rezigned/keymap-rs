@@ -66,7 +66,7 @@ ctrl-c = "Quit"
 Then in your terminal library of choice (we'll be using [crossterm](https://github.com/crossterm-rs/crossterm) here). You can use any deserializer (e.g. `toml`, `json`, etc.) to deserialize a key from the configuration above into the terminal library's event (e.g. `crossterm::event::KeyEvent`).
 
 ```rust
-let mapping: Config = toml::from_str(CONFIG).unwrap();
+let config: Config = toml::from_str(CONFIG).unwrap();
 
 // Read input event
 match read()? {
