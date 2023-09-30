@@ -16,8 +16,38 @@ impl From<KeyEvent> for KeyMap {
     fn from(value: KeyEvent) -> Self {
         Self {
             event: value,
-            node: None,
+            node: Some(Node::from(value)),
         }
+    }
+}
+
+impl From<KeyEvent> for Node {
+    fn from(value: KeyEvent) -> Self {
+        let (key, modifiers) = match value {
+            KeyEvent::BackTab => (Keys::BackTab, 0),
+            KeyEvent::Backspace => (Keys::Backspace, 0),
+            KeyEvent::Delete => (Keys::Delete, 0),
+            KeyEvent::Down => (Keys::Down, 0),
+            KeyEvent::End => (Keys::End, 0),
+            KeyEvent::Esc => (Keys::Esc, 0),
+            KeyEvent::Home => (Keys::Home, 0),
+            KeyEvent::F(n) => (Keys::F(n), 0),
+            KeyEvent::Insert => (Keys::Insert, 0),
+            KeyEvent::Left => (Keys::Left, 0),
+            KeyEvent::PageDown => (Keys::PageDown, 0),
+            KeyEvent::PageUp => (Keys::PageUp, 0),
+            KeyEvent::Right => (Keys::Right, 0),
+            KeyEvent::Up => (Keys::Up, 0),
+            KeyEvent::Char(' ') => (Keys::Space, 0),
+            KeyEvent::Char('\n') => (Keys::Enter, 0),
+            KeyEvent::Char('\t') => (Keys::Tab, 0),
+            KeyEvent::Char(c) => (Keys::Char(c), 0),
+            KeyEvent::Alt(c) => (Keys::Char(c), Modifier::Alt as u8),
+            KeyEvent::Ctrl(c) => (Keys::Char(c), Modifier::Ctrl as u8),
+            key => panic!("Unsupport Key {key:?}"),
+        };
+
+        Self { key, modifiers }
     }
 }
 
@@ -81,7 +111,7 @@ impl<'s> Deserialize<'s> for KeyMap {
 
 #[cfg(test)]
 mod tests {
-    use crate::{backend::termion::parse, Key};
+    use crate::{backend::termion::parse, Key, parser::{self, Node}};
     use termion::event::Key as KeyEvent;
 
     #[test]
@@ -91,12 +121,27 @@ mod tests {
             ("del", KeyEvent::Delete),
             ("alt-a", KeyEvent::Alt('a')),
             ("shift-a", KeyEvent::Char('A')),
-            ("shift-=", KeyEvent::Char('+')),
+            ("A", KeyEvent::Char('A')),
             ("enter", KeyEvent::Char('\n')),
             ("ctrl-a", KeyEvent::Ctrl('a')),
         ]
         .map(|(s, node)| {
             assert_eq!(Key::from(node), parse(s).unwrap());
+        });
+    }
+
+    #[test]
+    fn test_from_key_to_node() {
+        let alt_a = KeyEvent::Alt('a');
+
+        [
+            (KeyEvent::Char('['), "["),
+            (KeyEvent::Delete, "del"),
+            (alt_a, "alt-a"),
+        ]
+        .map(|(key, code)| {
+            let node = parser::parse(code).unwrap();
+            assert_eq!(Node::from(key), node);
         });
     }
 }

@@ -20,7 +20,7 @@ fn main() {
         let evt = c.unwrap();
 
         if let Event::Key(key) = evt {
-            if let Some((k, action)) = bindings.keys.get_key_value(&KeyMap::from(key)) {
+            if let Some((k, action)) = bindings.0.get_key_value(&KeyMap::from(key)) {
                 if *action == Action::Quit {
                     break;
                 }

@@ -13,7 +13,7 @@ mod termion;
 #[cfg(feature = "termion")]
 pub use self::termion::{KeyMap, parse};
 
-use crate::parser::Node;
+use crate::parser::{Node, Modifiers};
 
 #[derive(Debug, Eq)]
 pub struct Key<T> {
@@ -39,5 +39,21 @@ impl Display for KeyMap {
             Some(node) => write!(f, "{node}"),
             None => write!(f, ""),
         }
+    }
+}
+
+/// A wrapper that allows conversion between backend's modifier
+/// and Node's modifier.
+struct NodeModifiers(Modifiers);
+
+impl From<NodeModifiers> for Modifiers {
+    fn from(value: NodeModifiers) -> Self {
+        value.0
+    }
+}
+
+impl From<Modifiers> for NodeModifiers {
+    fn from(value: Modifiers) -> Self {
+        Self(value)
     }
 }

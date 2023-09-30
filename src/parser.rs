@@ -36,7 +36,8 @@ pub(crate) enum Modifier {
     Shift = 0b1000,
 }
 
-type Modifiers = u8;
+pub(crate) type Modifiers = u8;
+
 const MODIFIERS: [Modifier; 4] = [
     Modifier::Alt,
     Modifier::Cmd,

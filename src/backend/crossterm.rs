@@ -2,7 +2,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{de, Deserialize, Deserializer};
 
 use crate::parser::{self, Key as Keys, Modifier, Node};
-use super::Key;
+use super::{Key, NodeModifiers};
 
 pub type KeyMap = Key<KeyEvent>;
 
@@ -12,7 +12,7 @@ pub fn parse(s: &str) -> Result<KeyMap, pom::Error> {
 
 impl From<KeyEvent> for KeyMap {
     fn from(value: KeyEvent) -> Self {
-        Self { event: value, node: None }
+        Self { event: value, node: Some(Node::from(value)) }
     }
 }
 
@@ -21,6 +21,38 @@ impl From<Node> for KeyMap {
         Self {
             event: KeyEvent::from(&node),
             node: Some(node),
+        }
+    }
+}
+
+impl From<KeyEvent> for Node {
+    fn from(value: KeyEvent) -> Self {
+        match value {
+            KeyEvent { code, modifiers, .. } => {
+                let key = match code {
+                    KeyCode::BackTab => Keys::BackTab,
+                    KeyCode::Backspace => Keys::Backspace,
+                    KeyCode::Char(' ') => Keys::Space,
+                    KeyCode::Char(c) => Keys::Char(c),
+                    KeyCode::Delete => Keys::Delete,
+                    KeyCode::Down => Keys::Down,
+                    KeyCode::End => Keys::End,
+                    KeyCode::Enter => Keys::Enter,
+                    KeyCode::Esc => Keys::Esc,
+                    KeyCode::F(n) => Keys::F(n),
+                    KeyCode::Home => Keys::Home,
+                    KeyCode::Insert => Keys::Insert,
+                    KeyCode::Left => Keys::Left,
+                    KeyCode::PageDown => Keys::PageDown,
+                    KeyCode::PageUp => Keys::PageUp,
+                    KeyCode::Right => Keys::Right,
+                    KeyCode::Tab => Keys::Tab,
+                    KeyCode::Up => Keys::Up,
+                    code => panic!("Unsupport KeyEvent {code:?}"),
+                };
+
+                Self { key, modifiers: NodeModifiers::from(modifiers).into() }
+            }
         }
     }
 }
@@ -48,26 +80,37 @@ impl<'a> From<&'a Node> for KeyEvent {
             Keys::Up => KeyCode::Up.into(),
         };
 
-        Self::new(key, modifiers(node.modifiers))
+        Self::new(key, NodeModifiers::from(node.modifiers).into())
     }
 }
 
-fn modifiers(m: u8) -> KeyModifiers {
-    let mut mods = KeyModifiers::NONE;
-    if m & Modifier::Alt as u8 != 0 {
-        mods |= KeyModifiers::ALT
-    }
-    if m & Modifier::Cmd as u8 != 0 {
-        mods |= KeyModifiers::META
-    }
-    if m & Modifier::Ctrl as u8 != 0 {
-        mods |= KeyModifiers::CONTROL
-    }
-    if m & Modifier::Shift as u8 != 0 {
-        mods |= KeyModifiers::SHIFT
-    }
+const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
+    (KeyModifiers::ALT, Modifier::Alt),
+    (KeyModifiers::CONTROL, Modifier::Ctrl),
+    (KeyModifiers::META, Modifier::Cmd),
+    (KeyModifiers::SHIFT, Modifier::Shift),
+];
 
-    mods
+impl From<KeyModifiers> for NodeModifiers {
+    fn from(value: KeyModifiers) -> Self {
+        Self(MODIFIERS.into_iter().fold(0, |mut m, (m1, m2)| {
+            if value.contains(m1) {
+                m |= m2 as u8;
+            }
+            m
+        }))
+    }
+}
+
+impl From<NodeModifiers> for KeyModifiers {
+    fn from(value: NodeModifiers) -> Self {
+        MODIFIERS.into_iter().fold(KeyModifiers::NONE, |mut m, (m1, m2)| {
+            if value.0 & m2 as u8 != 0 {
+                m|= m1
+            }
+            m
+        })
+    }
 }
 
 /// Deserializes into Key
@@ -86,10 +129,10 @@ mod tests {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use serde::Deserialize;
 
-    use crate::backend::{
+    use crate::{backend::{
         crossterm::{parse, KeyMap},
         Key
-    };
+    }, parser::{Node, self}};
 
     #[test]
     fn test_parse() {
@@ -107,6 +150,24 @@ mod tests {
         ]
         .map(|(s, node)| {
             assert_eq!(*node, parse(s).unwrap());
+        });
+    }
+
+    #[test]
+    fn test_from_key_to_node() {
+        let alt_a = KeyEvent::new(
+            KeyCode::Char('a'),
+            KeyModifiers::ALT | KeyModifiers::CONTROL | KeyModifiers::SHIFT,
+        );
+
+        [
+            (KeyEvent::from(KeyCode::Char('[')), "["),
+            (KeyEvent::from(KeyCode::Delete), "del"),
+            (alt_a, "alt-ctrl-shift-a"),
+        ]
+        .map(|(key, code)| {
+            let node = parser::parse(code).unwrap();
+            assert_eq!(Node::from(key), node);
         });
     }
 
