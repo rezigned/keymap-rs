@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/rezigned/keymap-rs/compare/v0.3.0...v0.4.0) (2023-10-11)
+
+
+### Features
+
+* Convert from Backend::Key to Node ([#10](https://github.com/rezigned/keymap-rs/issues/10)) ([2b46c7f](https://github.com/rezigned/keymap-rs/commit/2b46c7fe0fa4ec0f23555642c3f1464544cf59d4))
+
 ## [0.3.0](https://github.com/rezigned/keymap-rs/compare/v0.2.0...v0.3.0) (2023-09-24)
 
 
