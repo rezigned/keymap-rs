@@ -4,6 +4,7 @@ pub mod backend;
 pub mod parser;
 
 pub use backend::{KeyMap, Key, parse};
+mod config;
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]
