@@ -80,12 +80,12 @@ impl From<&Punctuated<Variant, Comma>> for Patterns {
                     .for_each(|attr| {
                         let keys = parse_keys(&attr);
 
-                        // Generates `"key" => Action` match arms
+                        // Generates `Action => vec!["key"]` match arms
                         match_variants.push(quote! {
                             Self::#variant_name => vec![#(#keys),*],
                         }.into());
 
-                        // Generates `Action => vec!["key"]` match arms
+                        // Generates `"key" => Action` match arms
                         match_keys.push(quote! {
                             #(#keys)|* => Ok(Self::#variant_name),
                         }.into());

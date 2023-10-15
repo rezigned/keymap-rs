@@ -1,14 +1,35 @@
-#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap)]
+use serde::Deserialize;
+
+#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Deserialize)]
 enum Action {
     #[key("enter")]
     Create,
     #[key("d", "delete")]
-    Delete
+    Delete,
+}
+
+#[derive(Debug)]
+struct KeyMapConfig<T>(T);
+
+impl<'de, T> Deserialize<'de> for KeyMapConfig<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        todo!()
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    keys: KeyMapConfig<Action>,
 }
 
 #[cfg(test)]
 mod tests {
-    use super::Action;
+    use super::*;
+
+    const CONFIG: &str = include_str!("./config.toml");
 
     #[test]
     fn test_derive_keys() {
@@ -24,7 +45,7 @@ mod tests {
     }
 
     #[test]
-    fn test_key() {
+    fn test_keymap_keys() {
         [
             (Action::Create, vec!["enter"]),
             (Action::Delete, vec!["d", "delete"]),
@@ -32,5 +53,12 @@ mod tests {
         .map(|(action, keys)| {
             assert_eq!(action.keymap_keys(), keys);
         });
+    }
+
+    #[test]
+    fn test_deserialize() {
+        let config: Config = toml::from_str(CONFIG).unwrap();
+
+        dbg!(config);
     }
 }
