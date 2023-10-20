@@ -26,9 +26,13 @@ fn impl_from_keymap(enum_name: &Ident, variants: &Punctuated<Variant, Comma>) ->
     let patterns = Patterns::from(variants);
     let match_keys = patterns.match_keys;
     let match_variants = patterns.match_variants;
+    let key_val_pairs = patterns.key_val_pairs;
 
     quote! {
-        impl TryFrom<keymap::KeyMap> for #enum_name {
+        use std::collections::HashMap;
+        use keymap::{KeyMap, KeyValPair};
+
+        impl TryFrom<KeyMap> for #enum_name {
             type Error = String;
 
             fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
@@ -38,6 +42,14 @@ fn impl_from_keymap(enum_name: &Ident, variants: &Punctuated<Variant, Comma>) ->
                     #(#match_keys)*
                     _ => Err(format!("Unhandle key {key}")),
                 }
+            }
+        }
+
+        impl KeyValPair<Self> for #enum_name {
+            fn keymaps() -> HashMap<Vec<&'static str>, Self> {
+                HashMap::from([
+                    #(#key_val_pairs)*
+                ])
             }
         }
 
@@ -60,6 +72,9 @@ struct Patterns {
 
     // A collection of `Action => vec!["key"]` match arms
     match_variants: Vec<proc_macro2::TokenStream>,
+
+    // A collection of `Action => vec!["key"]` match arms
+    key_val_pairs: Vec<proc_macro2::TokenStream>,
 }
 
 impl From<&Punctuated<Variant, Comma>> for Patterns {
@@ -67,6 +82,7 @@ impl From<&Punctuated<Variant, Comma>> for Patterns {
     fn from(variants: &Punctuated<Variant, Comma>) -> Self {
         let mut match_variants = vec![];
         let mut match_keys = vec![];
+        let mut key_val_pairs = vec![];
 
         variants
             .iter()
@@ -85,6 +101,10 @@ impl From<&Punctuated<Variant, Comma>> for Patterns {
                             Self::#variant_name => vec![#(#keys),*],
                         }.into());
 
+                        key_val_pairs.push(quote! {
+                            (vec![#(#keys),*], Self::#variant_name),
+                        });
+
                         // Generates `"key" => Action` match arms
                         match_keys.push(quote! {
                             #(#keys)|* => Ok(Self::#variant_name),
@@ -92,7 +112,7 @@ impl From<&Punctuated<Variant, Comma>> for Patterns {
                     });
             });
 
-        Self { match_keys, match_variants }
+        Self { match_keys, match_variants, key_val_pairs }
     }
 }
 

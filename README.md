@@ -6,6 +6,26 @@
 
 `keymap-rs` is a library for parsing terminal input event from configurations and mapping them to the terminal library's event. (e.g. [crossterm](https://github.com/crossterm-rs/crossterm) or [termion](https://gitlab.redox-os.org/redox-os/termion))
 
+### Derive
+```rust
+#[derive(KeyMap)]
+enum Action {
+    #[key("left", "a")]
+    Left,
+    #[key("right", "d")]
+    Right,
+    #[key("q", "ctrl-c")]
+    Quit,
+}
+
+match Action::try_from(KeyMap::from(key)) {
+    Ok(action) => match action {
+        Action::Left => println!("Left!")?,
+        Action::Right => println!("Right!")?,
+        Action::Quit => break,
+    },
+}
+```
 ## Introduction
 
 Using terminal library's input event directly is sometimes not ideal. Let consider the following example of matching `ctrl-z` event:
