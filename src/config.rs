@@ -5,13 +5,15 @@ use serde::Deserialize;
 use crate::KeyMap;
 
 #[derive(Debug)]
-struct Config<T>(pub HashMap<KeyMap, T>);
+struct Config<V>(pub HashMap<KeyMap, V>);
 
 impl<T> Config<T> {
     pub fn get(&self, key: &KeyMap) -> Option<&T> {
         self.0.get(key)
     }
 }
+
+struct ConfigSeq<T>(pub HashMap<Vec<KeyMap>, T>);
 
 impl<'de, T> Deserialize<'de> for Config<T>
 where
@@ -25,6 +27,7 @@ where
         //     .into_iter()
         //     .map(|v| parse_seq()); // returns Vec<KeyMap>
 
+        // TODO: Add additional entries from KeyMap derive implementations
         HashMap::deserialize(deserializer)
             .map(Config)
     }
@@ -32,7 +35,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use crate::parse;
+    use crate::{parse, KeyValPair};
 
     use super::*;
 
@@ -47,6 +50,23 @@ mod tests {
         Delete,
     }
 
+    impl Into<HashMap<KeyMap, Self>> for Action {
+        fn into(self) -> HashMap<KeyMap, Self> {
+            HashMap::from([
+                (parse("c").unwrap(), Self::Create)
+            ])
+        }
+    }
+
+    impl KeyValPair<Self> for Action {
+        fn keymaps() -> HashMap<Vec<&'static str>, Self> {
+            HashMap::from([
+                // (parse("c").unwrap(), Self::Create),
+                (vec!["c"], Self::Create),
+            ])
+        }
+    }
+
     const CONFIG: &str = r#"
 [keys]
 c = "Create"
@@ -58,7 +78,9 @@ d = "Delete"
         let c: Config = toml::from_str(CONFIG).unwrap();
         let key = parse("c").unwrap();
         let v = c.keys.get(&key);
+
         dbg!(v);
         dbg!(c.keys);
+        dbg!(Action::keymaps());
     }
 }
