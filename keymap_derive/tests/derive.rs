@@ -8,21 +8,9 @@ enum Action {
     Delete,
 }
 
-#[derive(Debug)]
-struct KeyMapConfig<T>(T);
-
-impl<'de, T> Deserialize<'de> for KeyMapConfig<T> {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: serde::Deserializer<'de>,
-    {
-        todo!()
-    }
-}
-
 #[derive(Debug, Deserialize)]
 struct Config {
-    keys: KeyMapConfig<Action>,
+    keys: keymap::Config<Action>,
 }
 
 #[cfg(test)]
@@ -61,8 +49,8 @@ mod tests {
 
     #[test]
     fn test_into_hashmap() {
-        let h = Action::keymaps();
-        dbg!(h);
+        // let h = Action::keymaps();
+        // dbg!(h);
     }
 
     #[test]

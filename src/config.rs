@@ -2,34 +2,67 @@ use std::{collections::HashMap, fmt::Debug};
 
 use serde::Deserialize;
 
-use crate::KeyMap;
+use crate::{KeyMap, KeyValPair};
 
 #[derive(Debug)]
-struct Config<V>(pub HashMap<KeyMap, V>);
+pub struct Config<V>(pub HashMap<KeyMap, V>);
 
 impl<T> Config<T> {
     pub fn get(&self, key: &KeyMap) -> Option<&T> {
         self.0.get(key)
     }
+
+    pub fn extend(&self) {
+
+    }
+    // pub fn keymaps(self) -> Self {
+        // self.0.into_values().next().unwrap().
+    // }
 }
+
+// impl<V> KeyValPair<V> for Config<V> {
+//     fn keymaps() -> Self {
+//         todo!()
+//     }
+// }
 
 struct ConfigSeq<T>(pub HashMap<Vec<KeyMap>, T>);
 
+// impl<'de, T> Deserialize<'de> for Config<T>
+// where
+//     T: Deserialize<'de> + Debug,
+// {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         // let keys = HashMap::<String, T>::deserialize(deserializer)
+//         //     .into_iter()
+//         //     .map(|v| parse_seq()); // returns Vec<KeyMap>
+
+//         // TODO: Add additional entries from KeyMap derive implementations
+//         HashMap::deserialize(deserializer)
+//             .map(Config)
+//     }
+// }
+
 impl<'de, T> Deserialize<'de> for Config<T>
 where
-    T: Deserialize<'de> + Debug,
+    T: Deserialize<'de> + KeyValPair<T> + Debug,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: serde::Deserializer<'de>,
     {
-        // let keys = HashMap::<String, T>::deserialize(deserializer)
-        //     .into_iter()
-        //     .map(|v| parse_seq()); // returns Vec<KeyMap>
-
-        // TODO: Add additional entries from KeyMap derive implementations
         HashMap::deserialize(deserializer)
             .map(Config)
+            .map(|c: Config<T>| {
+                // let c2 = c.0.values().next().unwrap().keymaps_self();
+                let mut c2 = c.0.values().next().unwrap().keymaps_self();
+                // c.0.extend(c2.0);
+                c2.0.extend(c.0);
+                c2
+            })
     }
 }
 
@@ -59,11 +92,18 @@ mod tests {
     }
 
     impl KeyValPair<Self> for Action {
-        fn keymaps() -> HashMap<Vec<&'static str>, Self> {
-            HashMap::from([
+        // fn keymaps() -> super::Config<Self> {
+        //     super::Config(HashMap::from([
+        //         // (parse("c").unwrap(), Self::Create),
+        //         (parse("c").unwrap(), Self::Create),
+        //     ]))
+        // }
+
+        fn keymaps_self(&self) -> super::Config<Self> {
+            super::Config(HashMap::from([
                 // (parse("c").unwrap(), Self::Create),
-                (vec!["c"], Self::Create),
-            ])
+                (parse("c").unwrap(), Self::Create),
+            ]))
         }
     }
 
@@ -81,6 +121,6 @@ d = "Delete"
 
         dbg!(v);
         dbg!(c.keys);
-        dbg!(Action::keymaps());
+        // dbg!(c.);
     }
 }

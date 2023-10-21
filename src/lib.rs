@@ -5,12 +5,13 @@ pub mod parser;
 pub use backend::{KeyMap, Key, parse};
 mod config;
 
+pub use config::Config;
+
 #[cfg(feature = "derive")]
 #[doc(hidden)]
 pub use keymap_derive::*;
 
-use std::collections::HashMap;
 pub trait KeyValPair<V> {
-    // fn keymaps() -> HashMap<KeyMap, V>;
-    fn keymaps() -> HashMap<Vec<&'static str>, V>;
+    // fn keymaps() -> Config<V>;
+    fn keymaps_self(&self) -> Config<V>;
 }
