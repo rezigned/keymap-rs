@@ -13,7 +13,6 @@ impl<T> Config<T> {
     }
 
     pub fn extend(&self) {
-
     }
     // pub fn keymaps(self) -> Self {
         // self.0.into_values().next().unwrap().

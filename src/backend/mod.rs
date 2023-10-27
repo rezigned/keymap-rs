@@ -57,3 +57,25 @@ impl From<Modifiers> for NodeModifiers {
         Self(value)
     }
 }
+
+pub fn parse_seq(s: &str) -> Result<Vec<KeyMap>, pom::Error> {
+    str::split_whitespace(s)
+        .map(parse)
+        .collect()
+}
+
+#[test]
+fn test_parse_seq() {
+    [
+        ("ctrl-b", Ok(vec![
+            parse("ctrl-b").unwrap(),
+        ])),
+        ("ctrl-b l", Ok(vec![
+            parse("ctrl-b").unwrap(),
+            parse("l").unwrap(),
+        ])),
+        ("ctrl-b -l", Err(parse("-l").unwrap_err())),
+    ].map(|(s, v)| {
+        assert_eq!(parse_seq(s), v)
+    });
+}
