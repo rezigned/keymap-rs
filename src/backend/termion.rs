@@ -9,7 +9,7 @@ use crate::{
 pub type KeyMap = Key<KeyEvent>;
 
 pub fn parse(s: &str) -> Result<KeyMap, pom::Error> {
-    parser::parse(s).map(|n| n.into())
+    parser::parse(s).map(KeyMap::from)
 }
 
 impl From<KeyEvent> for KeyMap {

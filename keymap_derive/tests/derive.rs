@@ -16,7 +16,6 @@ struct Config {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-
     use keymap::KeyMap;
 
     use super::*;
@@ -45,12 +44,6 @@ mod tests {
         .map(|(action, keys)| {
             assert_eq!(action.keymap_keys(), keys);
         });
-    }
-
-    #[test]
-    fn test_into_hashmap() {
-        // let h = Action::keymaps();
-        // dbg!(h);
     }
 
     #[test]
