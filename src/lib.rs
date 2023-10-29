@@ -12,6 +12,5 @@ pub use config::Config;
 pub use keymap_derive::*;
 
 pub trait KeyValPair<V> {
-    // fn keymaps() -> Config<V>;
-    fn keymaps_self(&self) -> Config<V>;
+    fn keymaps(&self) -> Config<V>;
 }

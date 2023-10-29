@@ -2,52 +2,43 @@ use std::{collections::HashMap, fmt::Debug};
 
 use serde::Deserialize;
 
-use crate::{KeyMap, KeyValPair};
+use crate::KeyMap;
+
+trait KeyMapConfig<V> {
+    fn keymap_config() -> Config<V>;
+}
 
 #[derive(Debug)]
 pub struct Config<V>(pub HashMap<KeyMap, V>);
 
-impl<T> Config<T> {
-    pub fn get(&self, key: &KeyMap) -> Option<&T> {
+impl<V> Config<V> {
+    /// Retrieves the value associated with the given key, if any.
+    pub fn get(&self, key: &KeyMap) -> Option<&V> {
         self.0.get(key)
     }
 
-    pub fn extend(&self) {
+    /// Extends the current config with the other config.
+    pub fn extend(&mut self, other: Self) {
+        self.0.extend(other.0);
     }
-    // pub fn keymaps(self) -> Self {
-        // self.0.into_values().next().unwrap().
-    // }
 }
-
-// impl<V> KeyValPair<V> for Config<V> {
-//     fn keymaps() -> Self {
-//         todo!()
-//     }
-// }
 
 struct ConfigSeq<T>(pub HashMap<Vec<KeyMap>, T>);
 
-// impl<'de, T> Deserialize<'de> for Config<T>
+// impl<'de, V> Deserialize<'de> for Config<V>
 // where
-//     T: Deserialize<'de> + Debug,
+//     V: Deserialize<'de>,
 // {
 //     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
 //     where
 //         D: serde::Deserializer<'de>,
 //     {
-//         // let keys = HashMap::<String, T>::deserialize(deserializer)
-//         //     .into_iter()
-//         //     .map(|v| parse_seq()); // returns Vec<KeyMap>
-
-//         // TODO: Add additional entries from KeyMap derive implementations
-//         HashMap::deserialize(deserializer)
-//             .map(Config)
 //     }
 // }
 
-impl<'de, T> Deserialize<'de> for Config<T>
+impl<'de, V> Deserialize<'de> for Config<V>
 where
-    T: Deserialize<'de> + KeyValPair<T> + Debug,
+    V: Deserialize<'de> + KeyMapConfig<V>,
 {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -55,19 +46,17 @@ where
     {
         HashMap::deserialize(deserializer)
             .map(Config)
-            .map(|c: Config<T>| {
-                // let c2 = c.0.values().next().unwrap().keymaps_self();
-                let mut c2 = c.0.values().next().unwrap().keymaps_self();
-                // c.0.extend(c2.0);
-                c2.0.extend(c.0);
-                c2
+            .map(|mut c: Config<V>| {
+                // Extend with derived config
+                c.extend(V::keymap_config());
+                c
             })
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{parse, KeyValPair};
+    use crate::parse;
 
     use super::*;
 
@@ -82,26 +71,10 @@ mod tests {
         Delete,
     }
 
-    impl Into<HashMap<KeyMap, Self>> for Action {
-        fn into(self) -> HashMap<KeyMap, Self> {
-            HashMap::from([
-                (parse("c").unwrap(), Self::Create)
-            ])
-        }
-    }
-
-    impl KeyValPair<Self> for Action {
-        // fn keymaps() -> super::Config<Self> {
-        //     super::Config(HashMap::from([
-        //         // (parse("c").unwrap(), Self::Create),
-        //         (parse("c").unwrap(), Self::Create),
-        //     ]))
-        // }
-
-        fn keymaps_self(&self) -> super::Config<Self> {
+    impl KeyMapConfig<Action> for Action {
+        fn keymap_config() -> crate::Config<Action> {
             super::Config(HashMap::from([
-                // (parse("c").unwrap(), Self::Create),
-                (parse("c").unwrap(), Self::Create),
+                (parse("x").unwrap(), Action::Create),
             ]))
         }
     }
@@ -120,6 +93,5 @@ d = "Delete"
 
         dbg!(v);
         dbg!(c.keys);
-        // dbg!(c.);
     }
 }

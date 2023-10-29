@@ -46,7 +46,7 @@ fn impl_from_keymap(enum_name: &Ident, variants: &Punctuated<Variant, Comma>) ->
         }
 
         impl KeyValPair<Self> for #enum_name {
-            fn keymaps_self(&self) -> keymap::Config<Self> {
+            fn keymaps(&self) -> keymap::Config<Self> {
                 keymap::Config(HashMap::from([
                     // #(#key_val_pairs)*
                     (keymap::parse("v").unwrap(), Self::Create)

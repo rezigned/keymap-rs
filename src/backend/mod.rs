@@ -42,7 +42,7 @@ impl Display for KeyMap {
     }
 }
 
-/// A wrapper that allows conversion between backend's modifier
+/// A wrapper that allows conversion between terminal backend's modifier
 /// and Node's modifier.
 struct NodeModifiers(Modifiers);
 
@@ -58,6 +58,14 @@ impl From<Modifiers> for NodeModifiers {
     }
 }
 
+/// Parses a whitespace separated sequence of keys.
+///
+/// This splits the given string on whitespace and parses each component with
+/// `parse`. The results are collected into a `Vec<KeyMap>`.
+///
+/// # Errors
+///
+/// This function will return an error if any of the components fail to parse.
 pub fn parse_seq(s: &str) -> Result<Vec<KeyMap>, pom::Error> {
     str::split_whitespace(s)
         .map(parse)
