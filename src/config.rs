@@ -4,12 +4,15 @@ use serde::Deserialize;
 
 use crate::KeyMap;
 
-trait KeyMapConfig<V> {
+pub trait KeyMapConfig<V> {
     fn keymap_config() -> Config<V>;
 }
 
 #[derive(Debug)]
 pub struct Config<V>(pub HashMap<KeyMap, V>);
+
+#[derive(Debug)]
+pub struct DerivedConfig<V: KeyMapConfig<V>>(Config<V>);
 
 impl<V> Config<V> {
     /// Retrieves the value associated with the given key, if any.
@@ -23,20 +26,32 @@ impl<V> Config<V> {
     }
 }
 
-struct ConfigSeq<T>(pub HashMap<Vec<KeyMap>, T>);
-
-// impl<'de, V> Deserialize<'de> for Config<V>
-// where
-//     V: Deserialize<'de>,
-// {
-//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-//     where
-//         D: serde::Deserializer<'de>,
-//     {
-//     }
-// }
-
 impl<'de, V> Deserialize<'de> for Config<V>
+where
+    V: Deserialize<'de>,
+{
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        HashMap::deserialize(deserializer)
+            .map(Config)
+    }
+}
+
+
+impl<V: KeyMapConfig<V>> DerivedConfig<V> {
+    pub fn get(&self, key: &KeyMap) -> Option<&V> {
+        self.0.get(key)
+    }
+
+    /// Extends the current config with the other config.
+    pub fn extend(&mut self, other: Config<V>) {
+        self.0.extend(other);
+    }
+}
+
+impl<'de, V> Deserialize<'de> for DerivedConfig<V>
 where
     V: Deserialize<'de> + KeyMapConfig<V>,
 {
@@ -45,14 +60,23 @@ where
         D: serde::Deserializer<'de>,
     {
         HashMap::deserialize(deserializer)
-            .map(Config)
-            .map(|mut c: Config<V>| {
+            .map(|v| DerivedConfig(Config(v)))
+            .map(|mut c: DerivedConfig<V>| {
                 // Extend with derived config
                 c.extend(V::keymap_config());
                 c
             })
     }
 }
+
+// trait DerivedConfig<'de> {
+// }
+
+// impl<'de, V> DerivedConfig<'de> for Config<V>
+// where
+//     V: Deserialize<'de> + KeyMapConfig<V>,
+// {
+// }
 
 #[cfg(test)]
 mod tests {
@@ -62,7 +86,7 @@ mod tests {
 
     #[derive(Debug, Deserialize)]
     struct Config {
-        keys: super::Config<Action>,
+        keys: super::DerivedConfig<Action>,
     }
 
     #[derive(Debug, Deserialize)]
