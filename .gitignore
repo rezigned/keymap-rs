@@ -1,7 +1,9 @@
 /target
 Cargo.lock
 .DS_Store
+.vscode
 
 # Devenv
 .devenv*
 devenv.local.nix
+.env

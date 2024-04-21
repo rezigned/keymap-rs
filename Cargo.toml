@@ -27,7 +27,7 @@ strum = "0.25"
 strum_macros = "0.25"
 
 [features]
-default = ["crossterm"]
+default = ["crossterm", "derive"]
 derive = ["dep:keymap_derive"]
 
 [dev-dependencies]
