@@ -5,12 +5,8 @@ pub mod parser;
 pub use backend::{parse, parse_seq, Key, KeyMap};
 mod config;
 
-pub use config::Config;
+pub use config::{Config, KeyMapConfig};
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]
 pub use keymap_derive::*;
-
-pub trait KeyValPair<V> {
-    fn keymaps(&self) -> Config<V>;
-}

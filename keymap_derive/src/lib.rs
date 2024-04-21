@@ -6,7 +6,7 @@ use syn::{
     token::{self, Comma}, Attribute, DeriveInput, Ident, LitStr, Token, Variant,
 };
 
-const KEY_IDENT: &'static str = "key";
+const KEY_IDENT: &str = "key";
 
 /// Generates the `TryFrom<KeyMap>` implementation.
 #[proc_macro_derive(KeyMap, attributes(key))]
@@ -30,7 +30,7 @@ fn impl_from_keymap(enum_name: &Ident, variants: &Punctuated<Variant, Comma>) ->
 
     quote! {
         use std::collections::HashMap;
-        use keymap::{KeyMap, KeyValPair};
+        use keymap::{KeyMap, KeyMapConfig};
 
         impl TryFrom<KeyMap> for #enum_name {
             type Error = String;
@@ -45,8 +45,8 @@ fn impl_from_keymap(enum_name: &Ident, variants: &Punctuated<Variant, Comma>) ->
             }
         }
 
-        impl KeyValPair<Self> for #enum_name {
-            fn keymaps(&self) -> keymap::Config<Self> {
+        impl KeyMapConfig<Self> for #enum_name {
+            fn keymap_config() -> keymap::Config<Self> {
                 keymap::Config(HashMap::from([
                     // #(#key_val_pairs)*
                     (keymap::parse("v").unwrap(), Self::Create)

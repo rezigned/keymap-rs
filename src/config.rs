@@ -1,7 +1,6 @@
-use std::{collections::HashMap, fmt::Debug};
+use std::{collections::HashMap, fmt::{Debug, Display}};
 
 use serde::Deserialize;
-
 use crate::KeyMap;
 
 pub trait KeyMapConfig<V> {
@@ -10,13 +9,34 @@ pub trait KeyMapConfig<V> {
 
 trait Configure<V> {
     fn get(&self, key: &KeyMap) -> Option<&V>;
+    // fn get_seq(&self, key: &KeyMap) -> Option<&V>;
 }
 
 #[derive(Debug)]
 pub struct Config<V>(pub HashMap<KeyMap, V>);
 
-#[derive(Debug)]
-pub struct DerivedConfig<V: KeyMapConfig<V>>(Config<V>);
+struct Test<V>(V);
+impl<V: Debug> Test<V> {
+
+}
+
+impl<V: Display> Test<V> {
+
+}
+
+// impl<V, T: HashMap<String, V>> Configure<V> for T {
+//     fn get(&self, key: &KeyMap) -> Option<&V> {
+//         todo!()
+//     }
+// }
+
+// TODO: Should we create a new trait in parser so that
+// we can use it here (blanket implementation)
+// impl<V, T: HashMap<String, V>> T {
+//     fn get(&self, key: &KeyMap) -> Option<&V> {
+//         todo!()
+//     }
+// }
 
 impl<V> Config<V> {
     /// Extends the current config with the other config.
@@ -31,6 +51,20 @@ impl<V> Configure<V> for Config<V> {
         self.0.get(key)
     }
 }
+
+// Deref doesn't work with trait bound.
+// use std::ops::Deref;
+
+// impl<V: KeyMapConfig<V>> Deref for DerivedConfig<V> {
+//     type Target = Config<V>;
+
+//     fn deref(&self) -> &Self::Target {
+//         &self.0
+//     }
+// }
+
+#[derive(Debug)]
+pub struct DerivedConfig<V: KeyMapConfig<V>>(Config<V>);
 
 impl<V: KeyMapConfig<V>> Configure<V> for DerivedConfig<V> {
     fn get(&self, key: &KeyMap) -> Option<&V> {
