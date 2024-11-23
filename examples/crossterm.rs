@@ -26,21 +26,18 @@ fn read_event(stdout: &mut Stdout) -> io::Result<()> {
     loop {
         let event = read()?;
 
-        match event {
-            Event::Key(key) => {
-                if let Some((k, action)) = config.0.get_key_value(&KeyMap::from(key)) {
-                    if *action == Action::Quit {
-                        break;
-                    }
-
-                    execute!(
-                        stdout,
-                        Print(format!("key:{} - {}\n", k, action)),
-                        cursor::MoveToNextLine(1),
-                    )?;
+        if let Event::Key(key) = event {
+            if let Some((k, action)) = config.0.get_key_value(&KeyMap::from(key)) {
+                if *action == Action::Quit {
+                    break;
                 }
+
+                execute!(
+                    stdout,
+                    Print(format!("key:{} - {}\n", k, action)),
+                    cursor::MoveToNextLine(1),
+                )?;
             }
-            _ => (),
         }
     }
 
