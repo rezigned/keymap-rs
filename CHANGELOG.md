@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/rezigned/keymap-rs/compare/v0.4.0...v0.4.1) (2024-11-24)
+
+
+### Bug Fixes
+
+* update dependencies ([#12](https://github.com/rezigned/keymap-rs/issues/12)) ([2d0bfda](https://github.com/rezigned/keymap-rs/commit/2d0bfda90e3eff9c2b89079f1096f08de666b600))
+
 ## [0.4.0](https://github.com/rezigned/keymap-rs/compare/v0.3.0...v0.4.0) (2023-10-11)
 
 
