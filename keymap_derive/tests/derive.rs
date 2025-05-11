@@ -7,8 +7,7 @@ enum Action {
     #[key("enter", "ctrl-b n")]
     Create,
     /// Delete a file
-    #[key("d", "delete", "d d", "@digit")]
-    // #[char("@digit")]
+    #[key("d", "delete", "d d", "@lower", "@digit")]
     Delete,
 }
 
@@ -27,6 +26,18 @@ mod tests {
             (Action::Delete, "d"),
             (Action::Delete, "d d"),
             (Action::Delete, "delete"),
+        ]
+        .map(|(action, input)| {
+            let key = keymap::parse_seq(input).unwrap();
+            assert_eq!(action, Action::try_from(key).unwrap());
+        });
+    }
+
+    #[test]
+    fn test_derive_char_group() {
+        [
+            (Action::Delete, "x"), // @lower
+            (Action::Delete, "1"), // @digit
         ]
         .map(|(action, input)| {
             let key = keymap::parse_seq(input).unwrap();

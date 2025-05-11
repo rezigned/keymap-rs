@@ -3,6 +3,7 @@
 //! The `KeyMap` derive macro automatically implements the `TryFrom<KeyMap>` trait for enums,
 //! allowing you to easily convert a `KeyMap` to an enum variant based on the specified key bindings.
 use item::{parse_items, Item};
+use keymap_parser::{node::CharGroup, Key, Node};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DataEnum, DeriveInput, Ident};
@@ -19,7 +20,7 @@ mod item;
 ///
 /// #[derive(PartialEq, KeyMap)]
 /// enum Action {
-///     #[key("@digit")]
+///     #[key("c")]
 ///     Create,
 ///     #[key("x", "d")]
 ///     Delete,
@@ -96,6 +97,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
 /// Implements [`TryFrom<KeyMap>`] for enums.
 fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
     let mut match_arms = vec![];
+    let mut char_group_match_arms = vec![];
 
     // Builds match arms from key attributes.
     //
@@ -135,6 +137,48 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
         match_arms.push(quote! {
             #(#keys)|* => ::std::result::Result::Ok(#name::#ident),
         });
+
+        // Build char group match arms e.g.
+        //
+        // #[key("@digit")]
+        // Delete,
+        //
+        // ['0..9'] => Action::Delete
+        let groups = item
+            .nodes
+            .iter()
+            .filter_map(|nodes| {
+                let char_groups = nodes
+                    .iter()
+                    .filter(|node| matches!(node.key, Key::Group(_)))
+                    .map(|node| match node.key {
+                        Key::Group(group) => match group {
+                            CharGroup::Digit => quote! { '0'..='9' },
+                            CharGroup::Lower => quote! { 'a'..='z' },
+                            CharGroup::Upper => quote! { 'A'..='Z' },
+                            CharGroup::Alnum => quote! { '0'..='9' | 'a'..='z' | 'A'..='Z' },
+                            CharGroup::Alpha => quote! { 'a'..='z' | 'A'..='Z' },
+                            CharGroup::Char => quote! { '\u{0000}'..='\u{007F}' },
+                            _ => unreachable!(),
+                        },
+                        _ => unreachable!(),
+                    })
+                    .collect::<Vec<_>>();
+
+                if char_groups.is_empty() {
+                    None
+                } else {
+                    Some(quote! { [#(#char_groups),*] })
+                }
+            })
+            .collect::<Vec<_>>();
+
+        // ['0..=9'] | ['a'..='z'] => Action::Delete
+        if !groups.is_empty() {
+            char_group_match_arms.push(quote! {
+                #(#groups)|* => ::std::result::Result::Ok(#name::#ident),
+            });
+        }
     }
 
     quote! {
@@ -158,10 +202,16 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
 
                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
                     #(#match_arms)*
-                    _ => {
-                        // Match char group e.g. @digit, @alpha
+                    [char] => {
+                        // Match char group e.g. @digit, @alpha, etc.
+                        match [char.chars().next().unwrap()] {
+                            #(#char_group_match_arms)*
+                            _ =>
                         ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
+                        }
                     }
+                    _ =>
+                        ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
                 }
             }
         }
