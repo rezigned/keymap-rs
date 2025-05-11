@@ -1,6 +1,6 @@
 use serde::Deserialize;
 
-#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Hash, Deserialize)]
+#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Deserialize)]
 enum Action {
     /// Create a new file.
     /// Multi-line support.
@@ -9,11 +9,6 @@ enum Action {
     /// Delete a file
     #[key("d", "delete", "d d")]
     Delete,
-}
-
-#[derive(Debug, Deserialize)]
-struct Config {
-    keys: keymap::Config<Action>,
 }
 
 #[cfg(test)]
@@ -61,12 +56,5 @@ mod tests {
                 ),
             ]
         );
-    }
-
-    #[test]
-    fn test_deserialize() {
-        let config: Config = toml::from_str(CONFIG).unwrap();
-
-        dbg!(config.keys);
     }
 }

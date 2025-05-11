@@ -1,8 +1,8 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
+use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
 use serde::{de, Deserialize, Deserializer};
 
-use super::{KeyMap, NodeModifiers};
-use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
+use crate::KeyMap;
 
 pub fn parse(s: &str) -> Result<KeyEvent, ParseError> {
     parser::parse(s).map(|node: Node| backend_from_node(&node))
@@ -49,7 +49,7 @@ fn node_from_backend(value: KeyEvent) -> Node {
 
         Node {
             key,
-            modifiers: NodeModifiers::from(modifiers).into(),
+            modifiers: modifiers_from_backend(modifiers),
         }
     }
 }
@@ -76,7 +76,7 @@ fn backend_from_node(node: &Node) -> KeyEvent {
         Keys::Up => KeyCode::Up,
     };
 
-    KeyEvent::new(key, NodeModifiers::from(node.modifiers).into())
+    KeyEvent::new(key, modifiers_from_node(node.modifiers))
 }
 
 const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
@@ -86,21 +86,17 @@ const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
     (KeyModifiers::SHIFT, Modifier::Shift),
 ];
 
-impl From<KeyModifiers> for NodeModifiers {
-    fn from(value: KeyModifiers) -> Self {
-        Self(MODIFIERS.into_iter().fold(0, |acc, (m1, m2)| {
-            acc | if value.contains(m1) { m2 as u8 } else { 0 }
-        }))
-    }
+fn modifiers_from_backend(value: KeyModifiers) -> parser::Modifiers {
+    MODIFIERS.into_iter().fold(0, |acc, (m1, m2)| {
+        acc | if value.contains(m1) { m2 as u8 } else { 0 }
+    })
 }
 
-impl From<NodeModifiers> for KeyModifiers {
-    fn from(value: NodeModifiers) -> Self {
-        let none = KeyModifiers::NONE;
-        MODIFIERS.into_iter().fold(none, |acc, (m1, m2)| {
-            acc | if value.0 & (m2 as u8) != 0 { m1 } else { none }
-        })
-    }
+fn modifiers_from_node(value: parser::Modifiers) -> KeyModifiers {
+    let none = KeyModifiers::NONE;
+    MODIFIERS.into_iter().fold(none, |acc, (m1, m2)| {
+        acc | if value & (m2 as u8) != 0 { m1 } else { none }
+    })
 }
 
 impl<'s> Deserialize<'s> for KeyMap {

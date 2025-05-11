@@ -3,7 +3,7 @@ use termion::event::Key as KeyEvent;
 
 use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
 
-use super::KeyMap;
+use crate::KeyMap;
 
 pub fn parse(s: &str) -> Result<KeyEvent, ParseError> {
     parser::parse(s).map(backend_from_node)
