@@ -159,6 +159,7 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
                     #(#match_arms)*
                     _ => {
+                        // Match char group e.g. @digit, @alpha
                         ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
                     }
                 }

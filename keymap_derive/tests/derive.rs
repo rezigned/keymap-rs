@@ -7,7 +7,8 @@ enum Action {
     #[key("enter", "ctrl-b n")]
     Create,
     /// Delete a file
-    #[key("d", "delete", "d d")]
+    #[key("d", "delete", "d d", "@digit")]
+    // #[char("@digit")]
     Delete,
 }
 
