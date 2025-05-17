@@ -157,7 +157,7 @@ impl Display for Node {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         MODIFIERS.iter().for_each(|m| {
             if self.modifiers & *m as u8 != 0 {
-                write!(f, "{m}{}", KEY_SEP).unwrap();
+                write!(f, "{m}{KEY_SEP}").unwrap();
             }
         });
 

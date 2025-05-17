@@ -27,32 +27,31 @@ impl From<Node> for KeyMap {
 
 impl From<KeyEvent> for Node {
     fn from(value: KeyEvent) -> Self {
-        match value {
-            KeyEvent { code, modifiers, .. } => {
-                let key = match code {
-                    KeyCode::BackTab => Keys::BackTab,
-                    KeyCode::Backspace => Keys::Backspace,
-                    KeyCode::Char(' ') => Keys::Space,
-                    KeyCode::Char(c) => Keys::Char(c),
-                    KeyCode::Delete => Keys::Delete,
-                    KeyCode::Down => Keys::Down,
-                    KeyCode::End => Keys::End,
-                    KeyCode::Enter => Keys::Enter,
-                    KeyCode::Esc => Keys::Esc,
-                    KeyCode::F(n) => Keys::F(n),
-                    KeyCode::Home => Keys::Home,
-                    KeyCode::Insert => Keys::Insert,
-                    KeyCode::Left => Keys::Left,
-                    KeyCode::PageDown => Keys::PageDown,
-                    KeyCode::PageUp => Keys::PageUp,
-                    KeyCode::Right => Keys::Right,
-                    KeyCode::Tab => Keys::Tab,
-                    KeyCode::Up => Keys::Up,
-                    code => panic!("Unsupport KeyEvent {code:?}"),
-                };
+        let KeyEvent { code, modifiers, .. } = value;
+        {
+            let key = match code {
+                KeyCode::BackTab => Keys::BackTab,
+                KeyCode::Backspace => Keys::Backspace,
+                KeyCode::Char(' ') => Keys::Space,
+                KeyCode::Char(c) => Keys::Char(c),
+                KeyCode::Delete => Keys::Delete,
+                KeyCode::Down => Keys::Down,
+                KeyCode::End => Keys::End,
+                KeyCode::Enter => Keys::Enter,
+                KeyCode::Esc => Keys::Esc,
+                KeyCode::F(n) => Keys::F(n),
+                KeyCode::Home => Keys::Home,
+                KeyCode::Insert => Keys::Insert,
+                KeyCode::Left => Keys::Left,
+                KeyCode::PageDown => Keys::PageDown,
+                KeyCode::PageUp => Keys::PageUp,
+                KeyCode::Right => Keys::Right,
+                KeyCode::Tab => Keys::Tab,
+                KeyCode::Up => Keys::Up,
+                code => panic!("Unsupport KeyEvent {code:?}"),
+            };
 
-                Self { key, modifiers: NodeModifiers::from(modifiers).into() }
-            }
+            Self { key, modifiers: NodeModifiers::from(modifiers).into() }
         }
     }
 }

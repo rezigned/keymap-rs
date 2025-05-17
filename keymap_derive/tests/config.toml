@@ -1,3 +1,9 @@
 [keys]
 c = "Create"
 d = "Delete"
+
+# Alternatively
+#
+# [keys]
+# Create = "c"
+# Delete = ["c", "d", "a b c"]

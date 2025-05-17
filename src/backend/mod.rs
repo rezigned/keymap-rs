@@ -1,5 +1,5 @@
 //! # Backends
-use std::{hash::{Hasher, Hash}, fmt::{Display, self}};
+use std::{fmt::{self, format, Display}, hash::{Hash, Hasher}};
 
 #[cfg(feature = "crossterm")]
 mod crossterm;
@@ -19,6 +19,12 @@ use crate::parser::{Node, Modifiers};
 pub struct Key<T> {
     event: T,
     node: Option<Node>
+}
+
+impl KeyMap {
+    // pub fn as_key(&self) -> &str {
+    //     self.node.unwrap().
+    // }
 }
 
 impl<T: PartialEq> PartialEq for Key<T> {
