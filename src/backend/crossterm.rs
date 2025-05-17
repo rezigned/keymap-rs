@@ -74,6 +74,7 @@ fn backend_from_node(node: &Node) -> KeyEvent {
         Keys::Tab => KeyCode::Tab,
         Keys::Space => KeyCode::Char(' '),
         Keys::Up => KeyCode::Up,
+        Keys::Group(group) => KeyCode::Up,
     };
 
     KeyEvent::new(key, modifiers_from_node(node.modifiers))

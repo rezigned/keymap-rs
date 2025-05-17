@@ -19,7 +19,7 @@ mod item;
 ///
 /// #[derive(PartialEq, KeyMap)]
 /// enum Action {
-///     #[key("c")]
+///     #[key("@digit")]
 ///     Create,
 ///     #[key("x", "d")]
 ///     Delete,

@@ -124,6 +124,43 @@ pub enum Key {
     Tab,
     /// Up arrow key.
     Up,
+    /// Group
+    Group(CharGroup),
+}
+
+/// Character group types for pattern matching
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum CharGroup {
+    /// Matches ASCII digits (0-9)
+    Digit,
+    /// Matches lowercase ASCII letters (a-z)
+    Lower,
+    /// Matches uppercase ASCII letters (A-Z)
+    Upper,
+    /// Matches alphanumeric ASCII characters (a-z, A-Z, 0-9)
+    Alnum,
+    /// Matches ASCII letters (a-z, A-Z)
+    Alpha,
+    /// Matches any ASCII character
+    Char,
+
+    #[default]
+    None,
+}
+
+impl std::fmt::Display for CharGroup {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let name = match self {
+            CharGroup::Digit => "digit",
+            CharGroup::Lower => "lower",
+            CharGroup::Upper => "upper",
+            CharGroup::Alnum => "alnum",
+            CharGroup::Alpha => "alpha",
+            CharGroup::Char => "char",
+            _ => "none",
+        };
+        write!(f, "@{}", name)
+    }
 }
 
 /// Custom deserialization for [`Node`] from a string.
@@ -151,6 +188,7 @@ impl Display for Node {
         match self.key {
             Key::Char(char) => write!(f, "{char}"),
             Key::F(n) => write!(f, "{}{n}", self.key),
+            Key::Group(n) => write!(f, "{n}"),
             _ => write!(f, "{}", self.key),
         }
     }
