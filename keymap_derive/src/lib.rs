@@ -77,7 +77,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
         entries.push(quote! {
             (
                 #name::#ident,
-                keymap::Item::new(
+                ::keymap::Item::new(
                     vec![#(#keys),*].iter().map(ToString::to_string).collect::<Vec<String>>(),
                     #doc.to_string()
                 )
@@ -87,7 +87,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
 
     quote! {
         impl #name {
-            pub fn keymap_config() -> Vec<(#name, keymap::Item)> {
+            pub fn keymap_config() -> Vec<(#name, ::keymap::Item)> {
                 vec![#(#entries)*]
             }
         }
@@ -173,6 +173,8 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
             })
             .collect::<Vec<_>>();
 
+        // Build match arms
+        //
         // ['0..=9'] | ['a'..='z'] => Action::Delete
         if !groups.is_empty() {
             char_group_match_arms.push(quote! {
@@ -182,13 +184,13 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
     }
 
     quote! {
-        use keymap::KeyMap;
+        use ::keymap::KeyMap;
 
         impl TryFrom<KeyMap> for #name {
             type Error = String;
 
             /// Convert a [`KeyMap`] into an enum.
-            fn try_from(value: keymap::KeyMap) -> ::std::result::Result<Self, Self::Error> {
+            fn try_from(value: ::keymap::KeyMap) -> ::std::result::Result<Self, Self::Error> {
                 #name::try_from(vec![value])
             }
         }
@@ -197,7 +199,7 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
             type Error = String;
 
             /// Convert a [`Vec<KeyMap>`] into an enum.
-            fn try_from(value: Vec<keymap::KeyMap>) -> ::std::result::Result<Self, Self::Error> {
+            fn try_from(value: Vec<::keymap::KeyMap>) -> ::std::result::Result<Self, Self::Error> {
                 let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
 
                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {

@@ -44,3 +44,7 @@ pub fn parse(s: &str) -> Result<KeyMap, ParseError> {
 pub fn parse_seq(s: &str) -> Result<Vec<KeyMap>, ParseError> {
     keymap_parser::parse_seq(s).map(|v| v.into_iter().map(KeyMap).collect())
 }
+
+/// Allows calling proc macro in main crate (for testing)
+#[cfg(test)]
+extern crate self as keymap;
