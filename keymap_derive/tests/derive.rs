@@ -13,7 +13,7 @@ enum Action {
 
 #[cfg(test)]
 mod tests {
-    use keymap::Item;
+    use keymap::{Item, KeyMapConfig};
 
     use super::*;
 

@@ -86,8 +86,8 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
     }
 
     quote! {
-        impl #name {
-            pub fn keymap_config() -> Vec<(#name, ::keymap::Item)> {
+        impl ::keymap::KeyMapConfig<#name> for #name {
+            fn keymap_config() -> Vec<(#name, ::keymap::Item)> {
                 vec![#(#entries)*]
             }
         }
