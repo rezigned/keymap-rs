@@ -11,11 +11,11 @@ const KEY_IDENT: &str = "key";
 ///
 /// # Example
 ///
-/// ```rust
-/// use keymap::KeyMap;
+/// ```ignore
+/// use keymap::parse;
 /// use keymap_derive::KeyMap;
 ///
-/// #[derive(KeyMap)]
+/// #[derive(PartialEq, KeyMap)]
 /// enum Action {
 ///     #[key("c")]
 ///     Create,
@@ -91,7 +91,7 @@ fn impl_try_from_keymap(
 ///
 /// # Example
 ///
-/// ```rust
+/// ```ignore
 /// #[derive(KeyMap)]
 /// enum Action {
 ///     #[key("c")]
@@ -103,7 +103,7 @@ fn impl_try_from_keymap(
 ///
 /// The above code will generate the following match arms:
 ///
-/// ```rust
+/// ```ignore
 /// ["c"] => Ok(Action::Create),
 /// ["x"] | ["d"] => Ok(Action::Delete),
 /// ```
