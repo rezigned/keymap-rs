@@ -295,4 +295,14 @@ delete = "d"
             assert_eq!(key, &n);
         });
     }
+
+    #[test]
+    fn test_node() {
+        let n = Node::new(0, Key::Up);
+        match n {
+            Node { modifiers: 0, key: Key::Up } => println!("1"),
+            Node { modifiers: 1, key: Key::Up } => println!("1"),
+            _ => (),
+        }
+    }
 }

@@ -18,8 +18,8 @@ fn main() -> io::Result<()> {
     loop {
         let event = read()?;
 
-        match event {
-            Event::Key(key) => match Action::try_from(KeyMap::from(key)) {
+        if let Event::Key(key) = event {
+            match Action::try_from(KeyMap::from(key)) {
                 Ok(action) => match action {
                     Action::Up => send("Up!")?,
                     Action::Down => send("Down!")?,
@@ -29,8 +29,7 @@ fn main() -> io::Result<()> {
                     Action::Quit => break,
                 },
                 Err(e) => send(&e)?,
-            },
-            _ => (),
+            }
         }
     }
 

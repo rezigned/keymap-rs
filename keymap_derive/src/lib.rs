@@ -4,6 +4,7 @@ use syn::{
     punctuated::Punctuated, token::Comma, DataEnum, DeriveInput, Ident, LitStr, Token, Variant,
 };
 
+/// An attribute path name #[key(...)]
 const KEY_IDENT: &str = "key";
 
 /// A derive macro that generates [`TryFrom<KeyMap>`] implementations for enums.
@@ -18,13 +19,11 @@ const KEY_IDENT: &str = "key";
 /// enum Action {
 ///     #[key("c")]
 ///     Create,
-///     #[key("v")]
-///     View,
-///     #[key("x")]
+///     #[key("x", "d")]
 ///     Delete,
 /// }
 ///
-/// let keymap = KeyMap::parse("c").unwrap();
+/// let keymap = keymap::parse("c").unwrap();
 /// let action = Action::try_from(keymap).unwrap();
 ///
 /// assert_eq!(action, Action::Create);
@@ -59,8 +58,7 @@ fn impl_try_from_keymap(
     let match_arms = build_match_arms(name, variants);
 
     quote! {
-        use std::collections::HashMap;
-        use keymap::{KeyMap, KeyMapConfig};
+        use keymap::KeyMap;
 
         impl TryFrom<KeyMap> for #name {
             type Error = String;
@@ -74,7 +72,7 @@ fn impl_try_from_keymap(
         impl TryFrom<Vec<KeyMap>> for #name {
             type Error = String;
 
-            /// Convert a list of [`KeyMap`] into an enum.
+            /// Convert a [`Vec<KeyMap>`] into an enum.
             fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
                 let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
 
@@ -135,9 +133,7 @@ fn build_match_arms(
                         // Split string into a list of keys e.g.
                         //
                         // "a b" => [quote! { a }, quote! { b }]
-                        let seq = val
-                            .split_whitespace()
-                            .map(|key| quote! { #key });
+                        let seq = val.split_whitespace().map(|key| quote! { #key });
 
                         // Build sequence of keys e.g.
                         //
