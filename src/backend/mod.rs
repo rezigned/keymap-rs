@@ -1,5 +1,5 @@
 //! # Backends
-use std::{fmt::{self, format, Display}, hash::{Hash, Hasher}};
+use std::{fmt::{self, Display}, hash::{Hash, Hasher}};
 
 #[cfg(feature = "crossterm")]
 mod crossterm;
@@ -13,18 +13,12 @@ mod termion;
 #[cfg(feature = "termion")]
 pub use self::termion::{KeyMap, parse};
 
-use crate::parser::{Node, Modifiers};
+use keymap_parser::{Node, Modifiers};
 
 #[derive(Debug, Eq)]
 pub struct Key<T> {
     event: T,
     node: Option<Node>
-}
-
-impl KeyMap {
-    // pub fn as_key(&self) -> &str {
-    //     self.node.unwrap().
-    // }
 }
 
 impl<T: PartialEq> PartialEq for Key<T> {

@@ -1,86 +1,34 @@
 //! # Parser
 //!
-//! The `parser` module provides functionality for parsing terminal input events from plain-text.
+//! The `parser` module provides functionality for parsing input events from plain-text.
 //!
-use std::fmt::{Display, Formatter};
 use std::str;
 use std::{fmt::Debug, str::FromStr};
 
 use pom::Error;
 use pom::parser::{Parser, end, is_a, one_of, sym};
-use serde::{Deserialize, Deserializer, de};
-use strum_macros::{AsRefStr, Display, EnumString};
 
-/// Key separator
-const KEY_SEP: char = '-';
-
-#[derive(Debug, Eq, Hash, PartialEq)]
-pub(crate) struct Node {
-    pub modifiers: Modifiers,
-    pub key: Key,
-}
-
-impl Node {
-    fn new(modifiers: Modifiers, key: Key) -> Self {
-        Self { modifiers, key }
-    }
-}
-
-#[derive(Copy, Clone, Debug, Display, Eq, Hash, PartialEq, EnumString, AsRefStr)]
-#[strum(serialize_all = "lowercase")]
-pub(crate) enum Modifier {
-    None = 0b0000,
-    Alt = 0b0001,
-    Cmd = 0b0010,
-    Ctrl = 0b0100,
-    Shift = 0b1000,
-}
-
-pub(crate) type Modifiers = u8;
-
-const MODIFIERS: [Modifier; 4] = [
-    Modifier::Alt,
-    Modifier::Cmd,
-    Modifier::Ctrl,
-    Modifier::Shift,
-];
-
-#[derive(Debug, Display, Eq, Hash, PartialEq, EnumString, AsRefStr)]
-#[strum(serialize_all = "lowercase")]
-pub(crate) enum Key {
-    BackTab,
-    Backspace,
-    Char(char),
-    #[strum(serialize = "del", serialize = "delete")]
-    Delete,
-    Down,
-    End,
-    Enter,
-    Esc,
-    Home,
-    F(u8),
-    Insert,
-    Left,
-    PageDown,
-    PageUp,
-    Right,
-    Space,
-    Tab,
-    Up,
-}
+use crate::node::{KEY_SEP, Key, Modifier, Node};
 
 /// Parses an input string and returns a Node on success.
 ///
 /// # Errors
 ///
 /// This function will return an error if it can't parse the given input.
-pub(crate) fn parse(s: &str) -> Result<Node, Error> {
+pub fn parse(s: &str) -> Result<Node, Error> {
     let input = s.chars().collect::<Vec<char>>();
     let result = node().parse(&input);
 
     result
 }
 
+/// Parses a node from the input.
+///
+/// A node represents a combination of modifiers (ctrl, alt, shift, cmd) and a key.
+/// The parser first parses the combination of modifiers, then parses the key.
+///
+/// Returns a `Node` struct containing the modifiers and the key.
+///
 /// Grammar:
 ///
 /// node      = modifiers* key
@@ -90,6 +38,7 @@ pub(crate) fn parse(s: &str) -> Result<Node, Error> {
 /// fn-key    = "f" digit
 /// named-key = "up" | "esc" | "del" | ...
 /// char      = "a..z" | "A..Z" | "0".."9" | ...
+///
 fn node<'a>() -> Parser<'a, char, Node> {
     combination() - end()
 }
@@ -99,85 +48,90 @@ fn key<'a>() -> Parser<'a, char, Key> {
     fn_key() | named_key::<Key>() | char()
 }
 
-/// Parses a function key e.g. `f1`, `f2`, `f3`.
+/// Parses a function key.
+///
+/// This function parses a function key, which starts with 'f' followed by a digit (0-12).
+///
+/// For example: `f1`, `f2`, `f3`.
 fn fn_key<'a>() -> Parser<'a, char, Key> {
     sym('f')
         * ((sym('1') * one_of("012")).map(|n| 10 + n as u8) | is_a(digit).map(|n| n as u8))
             .map(|n| Key::F(n - 48))
 }
 
-/// Parses a named key e.g. `up`, `esc`, `del`.
+/// Parses a named key.
+///
+/// This function parses a named key, such as "up", "esc", or "del".
 fn named_key<'a, T>() -> Parser<'a, char, T>
 where
     T: FromStr + 'static,
     <T as FromStr>::Err: Debug,
 {
-    let p = is_a(alpha).repeat(2..);
-    p.convert(|s| s.iter().collect::<String>().parse::<T>())
+    is_a(alpha)
+        .repeat(2..)
+        .convert(|s| s.iter().collect::<String>().parse::<T>())
 }
 
+/// Parses a character.
+///
+/// This function parses a single ASCII character and returns it as a `Key::Char`.
 fn char<'a>() -> Parser<'a, char, Key> {
     is_a(ascii).map(Key::Char)
 }
 
+/// Parses a modifier.
+///
+/// This function parses a modifier key, such as "ctrl", "alt", "shift", or "cmd".
 fn modifier<'a>() -> Parser<'a, char, Modifier> {
     named_key::<Modifier>() - sym(KEY_SEP).opt()
 }
 
+/// Parses a combination of modifiers and a key.
+///
+/// This function parses a combination of modifiers (e.g., "ctrl-alt-") followed by a key (e.g., "a").
 fn combination<'a>() -> Parser<'a, char, Node> {
     (modifier().repeat(..4) + key()).map(|(m, key)| {
-        let mods = m.into_iter().map(|v| v as u8).sum();
+        let mods = m.into_iter().fold(0, |l, r| l | r as u8);
 
         Node::new(mods, key)
     })
 }
 
+/// Checks if a character is an ASCII alphabetic character.
 #[inline]
 fn alpha(term: char) -> bool {
     term.is_ascii_alphabetic()
 }
 
+/// Checks if a character is an ASCII character.
 #[inline]
 fn ascii(term: char) -> bool {
     term.is_ascii()
 }
 
+/// Checks if a character is an ASCII digit.
 #[inline]
 fn digit(term: char) -> bool {
     term.is_ascii_digit()
-}
-
-/// Deserializes into Node
-impl<'s> Deserialize<'s> for Node {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'s>,
-    {
-        let s = String::deserialize(deserializer)?;
-        parse(&s).map_err(de::Error::custom)
-    }
-}
-
-impl Display for Node {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        MODIFIERS.iter().for_each(|m| {
-            if self.modifiers & *m as u8 != 0 {
-                write!(f, "{m}{KEY_SEP}").unwrap();
-            }
-        });
-
-        match self.key {
-            Key::Char(char) => write!(f, "{char}"),
-            Key::F(n) => write!(f, "{}{n}", self.key),
-            _ => write!(f, "{}", self.key),
-        }
-    }
 }
 
 /// Parses a whitespace separated sequence of keys.
 ///
 /// This splits the given string on whitespace and parses each component with
 /// `parse`. The results are collected into a `Vec<KeyMap>`.
+///
+/// # Examples
+///
+/// ```
+/// use keymap_parser::{parse_seq, Node, Key};
+///
+/// let seq = parse_seq("a b").unwrap();
+///
+/// assert_eq!(seq, vec![
+///     Node::from(Key::Char('a')),
+///     Node::from(Key::Char('b')),
+/// ]);
+/// ```
 ///
 /// # Errors
 ///

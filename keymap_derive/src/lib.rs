@@ -1,3 +1,8 @@
+//! This crate provides a derive macro for generating `TryFrom<KeyMap>` and `TryFrom<Vec<KeyMap>>` implementations for enums.
+//!
+//! The `KeyMap` derive macro automatically implements the `TryFrom<KeyMap>` trait for enums,
+//! allowing you to easily convert a `KeyMap` to an enum variant based on the specified key bindings.
+use keymap_parser::parse_seq;
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -51,39 +56,41 @@ pub fn keymap(input: TokenStream) -> TokenStream {
     impl_try_from_keymap(&ast.ident, &variants).into()
 }
 
+/// Implements [`TryFrom<KeyMap>`] for enums.
 fn impl_try_from_keymap(
     name: &Ident,
     variants: &Punctuated<Variant, Comma>,
 ) -> proc_macro2::TokenStream {
-    let match_arms = build_match_arms(name, variants);
+    match build_match_arms(name, variants) {
+        Ok(match_arms) => quote! {
+            use keymap::KeyMap;
 
-    quote! {
-        use keymap::KeyMap;
+            impl TryFrom<KeyMap> for #name {
+                type Error = String;
 
-        impl TryFrom<KeyMap> for #name {
-            type Error = String;
-
-            /// Convert a [`KeyMap`] into an enum.
-            fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
-                #name::try_from(vec![value])
+                /// Convert a [`KeyMap`] into an enum.
+                fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
+                    #name::try_from(vec![value])
+                }
             }
-        }
 
-        impl TryFrom<Vec<KeyMap>> for #name {
-            type Error = String;
+            impl TryFrom<Vec<KeyMap>> for #name {
+                type Error = String;
 
-            /// Convert a [`Vec<KeyMap>`] into an enum.
-            fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
-                let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
+                /// Convert a [`Vec<KeyMap>`] into an enum.
+                fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
+                    let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
 
-                match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
-                    #(#match_arms)*
-                    _ => {
-                        Err(format!("Unknown key [{}]", keys.join(", ")))
+                    match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
+                        #(#match_arms)*
+                        _ => {
+                            Err(format!("Unknown key [{}]", keys.join(", ")))
+                        }
                     }
                 }
             }
-        }
+        },
+        Err(err) => err.to_compile_error(),
     }
 }
 
@@ -110,7 +117,7 @@ fn impl_try_from_keymap(
 fn build_match_arms(
     name: &Ident,
     variants: &Punctuated<Variant, Comma>,
-) -> Vec<proc_macro2::TokenStream> {
+) -> Result<Vec<proc_macro2::TokenStream>, syn::Error> {
     let mut arms = Vec::new();
 
     for variant in variants {
@@ -127,19 +134,34 @@ fn build_match_arms(
             // e.g. [["a"], ["g", "g"]]
             match attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty) {
                 Ok(lit_strs) => {
-                    let keys = lit_strs.iter().map(|str| {
-                        let val = str.value();
+                    let keys = lit_strs
+                        .iter()
+                        .map(|str| {
+                            let val = str.value();
 
-                        // Split string into a list of keys e.g.
-                        //
-                        // "a b" => [quote! { a }, quote! { b }]
-                        let seq = val.split_whitespace().map(|key| quote! { #key });
+                            // Parse key sequence, and return early on error
+                            let parsed = parse_seq(&val).map_err(|err| {
+                                syn::Error::new(
+                                    str.span(),
+                                    format!("Invalid key: \"{val}\". {err}"),
+                                )
+                            })?;
 
-                        // Build sequence of keys e.g.
-                        //
-                        // [quote! { a }, quote! { b }] => ["a", "b"]
-                        quote! { [#(#seq),*] }
-                    });
+                            // Split string into a list of keys e.g.
+                            //
+                            // "a b" => [quote! { a }, quote! { b }]
+                            let seq = parsed
+                                .iter()
+                                .map(ToString::to_string)
+                                .map(|key| quote! { #key })
+                                .collect::<Vec<_>>();
+
+                            // Build sequence of keys e.g.
+                            //
+                            // [quote! { a }, quote! { b }] => ["a", "b"]
+                            Ok(quote! { [#(#seq),*] })
+                        })
+                        .collect::<Result<Vec<_>, syn::Error>>()?;
 
                     // Combine keys into a single match arm e.g.
                     //
@@ -155,5 +177,5 @@ fn build_match_arms(
         }
     }
 
-    arms
+    Ok(arms)
 }

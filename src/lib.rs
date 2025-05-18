@@ -1,6 +1,6 @@
 #![doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR"), "/README.md"))]
 pub mod backend;
-pub mod parser;
+pub use keymap_parser::parser;
 
 pub use backend::{parse, parse_seq, Key, KeyMap};
 mod config;

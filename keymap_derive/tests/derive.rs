@@ -2,7 +2,7 @@ use serde::Deserialize;
 
 #[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Deserialize)]
 enum Action {
-    #[key("enter", "ctrl-b n")]
+    #[key("f12", "ctrl-b n")]
     Create,
     #[key("d", "delete", "d d")]
     Delete,
