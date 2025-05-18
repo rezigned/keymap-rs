@@ -7,11 +7,11 @@ edition = "2021"
 proc-macro = true
 
 [dependencies]
-syn = "2.0.37"
-quote = "1.0.33"
+syn = "2.0"
+quote = "1.0"
 proc-macro2 = "1.0"
 
 [dev-dependencies]
 keymap = { path = "../" }
 serde = { version = "1.0", features = ["derive"] }
-toml = "0.7"
+toml = "0.8"
