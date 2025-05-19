@@ -1,3 +1,4 @@
+#[cfg(feature = "crossterm")]
 use crossterm::{
     cursor,
     execute,

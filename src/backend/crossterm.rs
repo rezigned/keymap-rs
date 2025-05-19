@@ -1,8 +1,8 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{de, Deserialize, Deserializer};
 
-use crate::parser::{self, Key as Keys, Modifier, Node};
 use super::{Key, NodeModifiers};
+use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
 
 pub type KeyMap = Key<KeyEvent>;
 
@@ -12,75 +12,79 @@ pub fn parse(s: &str) -> Result<KeyMap, pom::Error> {
 
 impl From<KeyEvent> for KeyMap {
     fn from(value: KeyEvent) -> Self {
-        Self { event: value, node: Some(Node::from(value)) }
+        Self {
+            event: value,
+            node: Some(node_from_backend(value)),
+        }
     }
 }
 
 impl From<Node> for KeyMap {
     fn from(node: Node) -> Self {
         Self {
-            event: KeyEvent::from(&node),
+            event: backend_from_node(&node),
             node: Some(node),
         }
     }
 }
 
-impl From<KeyEvent> for Node {
-    fn from(value: KeyEvent) -> Self {
-        let KeyEvent { code, modifiers, .. } = value;
-        {
-            let key = match code {
-                KeyCode::BackTab => Keys::BackTab,
-                KeyCode::Backspace => Keys::Backspace,
-                KeyCode::Char(' ') => Keys::Space,
-                KeyCode::Char(c) => Keys::Char(c),
-                KeyCode::Delete => Keys::Delete,
-                KeyCode::Down => Keys::Down,
-                KeyCode::End => Keys::End,
-                KeyCode::Enter => Keys::Enter,
-                KeyCode::Esc => Keys::Esc,
-                KeyCode::F(n) => Keys::F(n),
-                KeyCode::Home => Keys::Home,
-                KeyCode::Insert => Keys::Insert,
-                KeyCode::Left => Keys::Left,
-                KeyCode::PageDown => Keys::PageDown,
-                KeyCode::PageUp => Keys::PageUp,
-                KeyCode::Right => Keys::Right,
-                KeyCode::Tab => Keys::Tab,
-                KeyCode::Up => Keys::Up,
-                code => panic!("Unsupport KeyEvent {code:?}"),
-            };
+fn node_from_backend(value: KeyEvent) -> Node {
+    let KeyEvent {
+        code, modifiers, ..
+    } = value;
+    {
+        let key = match code {
+            KeyCode::BackTab => Keys::BackTab,
+            KeyCode::Backspace => Keys::Backspace,
+            KeyCode::Char(' ') => Keys::Space,
+            KeyCode::Char(c) => Keys::Char(c),
+            KeyCode::Delete => Keys::Delete,
+            KeyCode::Down => Keys::Down,
+            KeyCode::End => Keys::End,
+            KeyCode::Enter => Keys::Enter,
+            KeyCode::Esc => Keys::Esc,
+            KeyCode::F(n) => Keys::F(n),
+            KeyCode::Home => Keys::Home,
+            KeyCode::Insert => Keys::Insert,
+            KeyCode::Left => Keys::Left,
+            KeyCode::PageDown => Keys::PageDown,
+            KeyCode::PageUp => Keys::PageUp,
+            KeyCode::Right => Keys::Right,
+            KeyCode::Tab => Keys::Tab,
+            KeyCode::Up => Keys::Up,
+            code => panic!("Unsupport KeyEvent {code:?}"),
+        };
 
-            Self { key, modifiers: NodeModifiers::from(modifiers).into() }
+        Node {
+            key,
+            modifiers: NodeModifiers::from(modifiers).into(),
         }
     }
 }
 
-impl<'a> From<&'a Node> for KeyEvent {
-    fn from(node: &'a Node) -> Self {
-        let key = match node.key {
-            Keys::BackTab => KeyCode::BackTab,
-            Keys::Backspace => KeyCode::Backspace,
-            Keys::Char(c) => KeyCode::Char(c),
-            Keys::Delete => KeyCode::Delete,
-            Keys::Down => KeyCode::Down,
-            Keys::End => KeyCode::End,
-            Keys::Enter => KeyCode::Enter,
-            Keys::Esc => KeyCode::Esc,
-            Keys::F(n) => KeyCode::F(n),
-            Keys::Home => KeyCode::Home,
-            Keys::Insert => KeyCode::Insert,
-            Keys::Left => KeyCode::Left,
-            Keys::PageDown => KeyCode::PageDown,
-            Keys::PageUp => KeyCode::PageUp,
-            Keys::Right => KeyCode::Right,
-            Keys::Tab => KeyCode::Tab,
-            Keys::Space => KeyCode::Char(' '),
-            Keys::Up => KeyCode::Up,
-        };
+fn backend_from_node(node: &Node) -> KeyEvent {
+    let key = match node.key {
+        Keys::BackTab => KeyCode::BackTab,
+        Keys::Backspace => KeyCode::Backspace,
+        Keys::Char(c) => KeyCode::Char(c),
+        Keys::Delete => KeyCode::Delete,
+        Keys::Down => KeyCode::Down,
+        Keys::End => KeyCode::End,
+        Keys::Enter => KeyCode::Enter,
+        Keys::Esc => KeyCode::Esc,
+        Keys::F(n) => KeyCode::F(n),
+        Keys::Home => KeyCode::Home,
+        Keys::Insert => KeyCode::Insert,
+        Keys::Left => KeyCode::Left,
+        Keys::PageDown => KeyCode::PageDown,
+        Keys::PageUp => KeyCode::PageUp,
+        Keys::Right => KeyCode::Right,
+        Keys::Tab => KeyCode::Tab,
+        Keys::Space => KeyCode::Char(' '),
+        Keys::Up => KeyCode::Up,
+    };
 
-        Self::new(key, NodeModifiers::from(node.modifiers).into())
-    }
+    KeyEvent::new(key, NodeModifiers::from(node.modifiers).into())
 }
 
 const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
@@ -103,12 +107,14 @@ impl From<KeyModifiers> for NodeModifiers {
 
 impl From<NodeModifiers> for KeyModifiers {
     fn from(value: NodeModifiers) -> Self {
-        MODIFIERS.into_iter().fold(KeyModifiers::NONE, |mut m, (m1, m2)| {
-            if value.0 & m2 as u8 != 0 {
-                m|= m1
-            }
-            m
-        })
+        MODIFIERS
+            .into_iter()
+            .fold(KeyModifiers::NONE, |mut m, (m1, m2)| {
+                if value.0 & m2 as u8 != 0 {
+                    m |= m1
+                }
+                m
+            })
     }
 }
 
@@ -128,10 +134,11 @@ mod tests {
     use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
     use serde::Deserialize;
 
-    use crate::{backend::{
-        crossterm::{parse, KeyMap},
-        Key
-    }, parser::{Node, self}};
+    use crate::backend::{
+        crossterm::{node_from_backend, parse, KeyMap},
+        Key,
+    };
+    use keymap_parser as parser;
 
     #[test]
     fn test_parse() {
@@ -166,7 +173,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(Node::from(key), node);
+            assert_eq!(node_from_backend(key), node);
         });
     }
 
