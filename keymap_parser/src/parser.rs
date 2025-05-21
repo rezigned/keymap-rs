@@ -1,7 +1,9 @@
 //! # Parser
 //!
-//! The `parser` module provides functionality for parsing input events from plain-text.
+//! The `parser` module provides functionality for parsing input events from plain-text keymap definitions.
+//! It supports sequences like "ctrl-alt-f1" or "a b", mapping them to structured key/modifier representations.
 //!
+
 use std::str;
 use std::{fmt::Debug, str::FromStr};
 
@@ -10,11 +12,11 @@ use pom::parser::{Parser, end, is_a, one_of, sym};
 
 use crate::node::{KEY_SEP, Key, Modifier, Node};
 
-/// Parses an input string and returns a Node on success.
+/// Parses an input string representing a key or key combination into a [`Node`] on success.
 ///
 /// # Errors
 ///
-/// This function will return an error if it can't parse the given input.
+/// Returns an [`Error`] if the input cannot be parsed as a valid key or key combination.
 pub fn parse(s: &str) -> Result<Node, Error> {
     let input = s.chars().collect::<Vec<char>>();
     let result = node().parse(&input);
@@ -22,103 +24,96 @@ pub fn parse(s: &str) -> Result<Node, Error> {
     result
 }
 
-/// Parses a node from the input.
+/// Top-level parser for a key combination node.
 ///
-/// A node represents a combination of modifiers (ctrl, alt, shift, cmd) and a key.
-/// The parser first parses the combination of modifiers, then parses the key.
+/// A node represents a combination of zero or more modifiers (e.g., ctrl, alt)
+/// and a key (e.g., 'a', 'esc', 'f1').
 ///
-/// Returns a `Node` struct containing the modifiers and the key.
-///
-/// Grammar:
-///
-/// node      = modifiers* key
-/// modifiers = modifier "-"
-/// modifier  = "ctrl" | "cmd" | "alt" | "shift"
-/// key       = fn-key | named-key | char
-/// fn-key    = "f" digit
-/// named-key = "up" | "esc" | "del" | ...
-/// char      = "a..z" | "A..Z" | "0".."9" | ...
-///
+/**
+Grammar:
+    node      = modifiers* key
+    modifiers = modifier "-"
+    modifier  = "ctrl" | "cmd" | "alt" | "shift"
+    key       = fn-key | named-key | char
+    fn-key    = "f" digit
+    named-key = "up" | "esc" | "del" | ...
+    char      = "a..z" | "A..Z" | "0".."9" | ...
+*/
 fn node<'a>() -> Parser<'a, char, Node> {
     combination() - end()
 }
 
-/// Parses a key e.g. `f1`, `up`, `esc`, `c`.
+/// Parses a key (function key, named key, or character).
 fn key<'a>() -> Parser<'a, char, Key> {
     fn_key() | named_key::<Key>() | char()
 }
 
-/// Parses a function key.
+/// Parses a function key (e.g., "f1", "f12").
 ///
-/// This function parses a function key, which starts with 'f' followed by a digit (0-12).
-///
-/// For example: `f1`, `f2`, `f3`.
+/// Accepts "f0" through "f12".
 fn fn_key<'a>() -> Parser<'a, char, Key> {
     sym('f')
-        * ((sym('1') * one_of("012")).map(|n| 10 + n as u8) | is_a(digit).map(|n| n as u8))
-            .map(|n| Key::F(n - 48))
+        * ((sym('1') * one_of("012")).map(|n| 10 + n as u8) // "f10", "f11", or "f12"
+          | is_a(digit).map(|n| n as u8))                   // "f0" through "f9"
+            .map(|n| Key::F(n - 48)) // Adjust ASCII to digit value as needed
 }
 
-/// Parses a named key.
-///
-/// This function parses a named key, such as "up", "esc", or "del".
+/// Parses a named key such as "up", "esc", or "del".
 fn named_key<'a, T>() -> Parser<'a, char, T>
 where
     T: FromStr + 'static,
     <T as FromStr>::Err: Debug,
 {
     is_a(alpha)
-        .repeat(2..)
+        .repeat(2..) // At least 2 alphabetic characters
         .convert(|s| s.iter().collect::<String>().parse::<T>())
 }
 
-/// Parses a character.
-///
-/// This function parses a single ASCII character and returns it as a `Key::Char`.
+/// Parses a single ASCII character key (e.g., 'a', 'Z', '7').
 fn char<'a>() -> Parser<'a, char, Key> {
     is_a(ascii).map(Key::Char)
 }
 
-/// Parses a modifier.
+/// Parses a modifier key (e.g., "ctrl", "alt", "shift", "cmd").
 ///
-/// This function parses a modifier key, such as "ctrl", "alt", "shift", or "cmd".
+/// Optionally allows for a trailing separator (e.g., "-").
 fn modifier<'a>() -> Parser<'a, char, Modifier> {
     named_key::<Modifier>() - sym(KEY_SEP).opt()
 }
 
-/// Parses a combination of modifiers and a key.
+/// Parses a combination of modifiers (up to 4) followed by a key (e.g., "ctrl-alt-a").
 ///
-/// This function parses a combination of modifiers (e.g., "ctrl-alt-") followed by a key (e.g., "a").
+/// Returns a [`Node`] encoding the modifier bitmask and the key.
 fn combination<'a>() -> Parser<'a, char, Node> {
     (modifier().repeat(..4) + key()).map(|(m, key)| {
+        // Combine modifiers using bitwise OR into a single u8
         let mods = m.into_iter().fold(0, |l, r| l | r as u8);
 
         Node::new(mods, key)
     })
 }
 
-/// Checks if a character is an ASCII alphabetic character.
+/// Returns true if the character is an ASCII alphabetic letter.
 #[inline]
 fn alpha(term: char) -> bool {
     term.is_ascii_alphabetic()
 }
 
-/// Checks if a character is an ASCII character.
+/// Returns true if the character is any ASCII character.
 #[inline]
 fn ascii(term: char) -> bool {
     term.is_ascii()
 }
 
-/// Checks if a character is an ASCII digit.
+/// Returns true if the character is an ASCII digit ('0' - '9').
 #[inline]
 fn digit(term: char) -> bool {
     term.is_ascii_digit()
 }
 
-/// Parses a whitespace separated sequence of keys.
+/// Parses a whitespace-separated sequence of key expressions.
 ///
-/// This splits the given string on whitespace and parses each component with
-/// `parse`. The results are collected into a `Vec<KeyMap>`.
+/// Splits the input string on whitespace and parses each part as a [`Node`].
 ///
 /// # Examples
 ///
@@ -126,16 +121,15 @@ fn digit(term: char) -> bool {
 /// use keymap_parser::{parse_seq, Node, Key};
 ///
 /// let seq = parse_seq("a b").unwrap();
-///
-/// assert_eq!(seq, vec![
-///     Node::from(Key::Char('a')),
-///     Node::from(Key::Char('b')),
-/// ]);
+/// assert_eq!(
+///     seq,
+///     vec![Node::from(Key::Char('a')), Node::from(Key::Char('b'))]
+/// );
 /// ```
 ///
 /// # Errors
 ///
-/// This function will return an error if any of the components fail to parse.
+/// Returns an error if any portion of the sequence fails to parse.
 pub fn parse_seq(s: &str) -> Result<Vec<Node>, pom::Error> {
     str::split_whitespace(s).map(parse).collect()
 }
@@ -148,7 +142,7 @@ fn test_parse_seq() {
             "ctrl-b l",
             Ok(vec![parse("ctrl-b").unwrap(), parse("l").unwrap()]),
         ),
-        ("ctrl-b -l", Err(parse("-l").unwrap_err())),
+        ("ctrl-b -l", Err(parse("-l").unwrap_err())), // Invalid: dangling separator
     ]
     .map(|(s, v)| assert_eq!(parse_seq(s), v));
 }
@@ -203,7 +197,7 @@ mod tests {
 
     #[test]
     fn test_parse_fn_key() {
-        // Valid number
+        // Valid function key numbers: f0 - f12
         (0..=12).for_each(|n| {
             let input = format!("f{n}").chars().collect::<Vec<char>>();
             let result = (fn_key() - end()).parse(&input);
@@ -211,7 +205,7 @@ mod tests {
             assert_eq!(Key::F(n), result.unwrap());
         });
 
-        // Invalid number
+        // Invalid: above f12
         [13, 15].map(|n| {
             let input: Vec<char> = format!("f{n}").chars().collect();
             let result = (fn_key() - end()).parse(&input);
@@ -222,6 +216,7 @@ mod tests {
 
     #[test]
     fn test_parse_enum() {
+        // Check named keys
         [("up", Key::Up), ("esc", Key::Esc), ("del", Key::Delete)].map(|(s, key)| {
             let input: Vec<char> = s.chars().collect();
             let r = named_key::<Key>().parse(&input);

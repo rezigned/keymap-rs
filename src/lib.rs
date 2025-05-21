@@ -9,4 +9,4 @@ pub use config::{Config, KeyMapConfig};
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]
-pub use keymap_derive::*;
+pub use keymap_derive::KeyMap;
