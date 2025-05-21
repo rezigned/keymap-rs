@@ -1,9 +1,18 @@
 use serde::Deserialize;
 
+#[derive(Debug, PartialEq)]
+pub(crate) struct KeyMapInfo {
+    pub keys: Vec<&'static str>,
+    pub description: &'static str,
+}
+
 #[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Deserialize)]
 enum Action {
-    #[key("f12", "ctrl-b n")]
+    /// Create a new file.
+    /// Multi-line support.
+    #[key("enter", "ctrl-b n")]
     Create,
+    /// Delete a file
     #[key("d", "delete", "d d")]
     Delete,
 }
@@ -28,6 +37,7 @@ mod tests {
         ]
         .map(|(action, input)| {
             let key = keymap::parse(input).unwrap();
+            dbg!(Action::keymap_config());
             assert_eq!(action, Action::try_from(key).unwrap());
         });
     }

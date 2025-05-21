@@ -12,6 +12,8 @@ use syn::{
 /// An attribute path name #[key(...)]
 const KEY_IDENT: &str = "key";
 
+const DOC_IDENT: &str = "doc";
+
 /// A derive macro that generates [`TryFrom<KeyMap>`] implementations for enums.
 ///
 /// # Example
@@ -53,7 +55,61 @@ pub fn keymap(input: TokenStream) -> TokenStream {
         .into();
     };
 
-    impl_try_from_keymap(&ast.ident, &variants).into()
+    let try_from_impl = impl_try_from_keymap(&ast.ident, &variants);
+    // let description_impl = impl_description_method(&ast.ident, &variants);
+    let config_impl = impl_keymap_config(&ast.ident, &variants);
+
+    quote! {
+        #try_from_impl
+        // #description_impl
+        #config_impl
+    }
+    .into()
+}
+
+fn impl_keymap_config(
+    name: &Ident,
+    variants: &Punctuated<Variant, Comma>,
+) -> proc_macro2::TokenStream {
+    let mut map_entries = Vec::new();
+
+    for variant in variants {
+        let variant_ident = &variant.ident;
+        let doc = parse_doc(variant);
+        let mut keys = Vec::new();
+        match parse_keys(variant) {
+            Ok(_keys) => {
+                // dbg!(_keys);
+                keys = _keys;
+            }
+            Err(err) => {
+                dbg!(&err);
+                return err.into_compile_error()
+            }
+        }
+
+        let keys_vec_string = quote! {
+            vec![#(#keys),*].iter().map(|s| s.to_string()).collect::<Vec<String>>()
+        };
+        let description_string = quote! {
+            #doc.to_string()
+        };
+
+        let map_key = quote! { stringify!(#variant_ident).to_string() };
+        let map_value = quote! { (#keys_vec_string, #description_string) };
+
+        map_entries.push(quote! { (#map_key, #map_value), });
+    }
+
+    quote! {
+        impl #name {
+            pub fn keymap_config() -> std::collections::HashMap<String, (Vec<String>, String)> {
+                std::collections::HashMap::from([
+                    #(#map_entries)*
+                ])
+            }
+        }
+    }
 }
 
 /// Implements [`TryFrom<KeyMap>`] for enums.
@@ -178,4 +234,86 @@ fn build_match_arms(
     }
 
     Ok(arms)
+}
+
+fn parse_doc(variant: &Variant) -> String {
+    let mut doc = String::new();
+
+    for attr in &variant.attrs {
+        if !attr.path().is_ident(DOC_IDENT) {
+            continue;
+        }
+
+        match &attr.meta {
+            syn::Meta::NameValue(meta_name_value) => {
+                if let syn::Expr::Lit(expr_lit) = &meta_name_value.value {
+                    if let syn::Lit::Str(lit_str) = &expr_lit.lit {
+                        let doc_line = lit_str.value().trim().to_string();
+                        if !doc.is_empty() {
+                            doc.push('\n');
+                        }
+                        doc.push_str(&doc_line);
+                    }
+                }
+            }
+            // Not a NameValue, or other meta type, ignore for doc comments
+            _ => {}
+        }
+    }
+
+    doc
+}
+
+fn parse_keys(variant: &Variant) -> Result<Vec<proc_macro2::TokenStream>, syn::Error> {
+    let mut keys = Vec::new();
+
+    for attr in &variant.attrs {
+        if !attr.path().is_ident(KEY_IDENT) {
+            continue;
+        }
+
+        // Parse #[key("a", "g g")] directly into list of LitStr
+        //          |  |________|
+        //        path   (args)
+        //
+        // e.g. [["a"], ["g", "g"]]
+        match attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty) {
+            Ok(lit_strs) => {
+                for str in lit_strs {
+                    // Directly use the string value, quote! will handle making it a literal
+                    // let s_val = lit_str.value();
+                    // keys.push(quote! { #s_val });
+
+                    let val = str.value();
+
+                    // Parse key sequence, and return early on error
+                    let parsed = parse_seq(&val).map_err(|err| {
+                        syn::Error::new(str.span(), format!("Invalid key: \"{val}\". {err}"))
+                    })?;
+
+                    keys.push(quote! { #val });
+
+                    // Split string into a list of keys e.g.
+                    //
+                    // "a b" => [quote! { a }, quote! { b }]
+                    // let seq = parsed
+                    //     .iter()
+                    //     .map(ToString::to_string)
+                    //     .map(|key| quote! { #key })
+                    //     .collect::<Vec<_>>();
+
+                    // Build sequence of keys e.g.
+                    //
+                    // [quote! { a }, quote! { b }] => ["a", "b"]
+                    // keys.push(quote! { [#(#seq),*] })
+                }
+            }
+            Err(err) => {
+                // Handle error or ignore if not critical for this specific function
+                keys.push(err.to_compile_error());
+            }
+        }
+    }
+
+    Ok(keys)
 }
