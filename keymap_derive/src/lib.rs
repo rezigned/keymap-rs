@@ -56,54 +56,62 @@ pub fn keymap(input: TokenStream) -> TokenStream {
     };
 
     let try_from_impl = impl_try_from_keymap(&ast.ident, &variants);
-    // let description_impl = impl_description_method(&ast.ident, &variants);
-    let config_impl = impl_keymap_config(&ast.ident, &variants);
+    // let config_impl = impl_keymap_config(&ast.ident, &variants);
+    let items = parse_items(&variants);
+    let config = impl_keymap_config(&ast.ident, &items);
 
     quote! {
         #try_from_impl
-        // #description_impl
-        #config_impl
+        #config
     }
     .into()
 }
 
+struct Item<'a> {
+    variant: &'a Variant,
+    keys: Result<Vec<proc_macro2::TokenStream>, syn::Error>,
+    description: String,
+}
+
+fn parse_items(variants: &Punctuated<Variant, Comma>) -> Vec<Item> {
+    variants
+        .iter()
+        .map(|variant| Item {
+            variant,
+            description: parse_doc(variant),
+            keys: parse_keys(variant),
+        })
+        .collect::<Vec<_>>()
+}
+
 fn impl_keymap_config(
     name: &Ident,
-    variants: &Punctuated<Variant, Comma>,
+    items: &Vec<Item>,
 ) -> proc_macro2::TokenStream {
     let mut map_entries = Vec::new();
 
-    for variant in variants {
-        let variant_ident = &variant.ident;
-        let doc = parse_doc(variant);
-        let mut keys = Vec::new();
-        match parse_keys(variant) {
-            Ok(_keys) => {
-                // dbg!(_keys);
-                keys = _keys;
-            }
-            Err(err) => {
-                dbg!(&err);
-                return err.into_compile_error()
-            }
-        }
-
-        let keys_vec_string = quote! {
-            vec![#(#keys),*].iter().map(|s| s.to_string()).collect::<Vec<String>>()
-        };
-        let description_string = quote! {
-            #doc.to_string()
+    for item in items {
+        let Ok(keys) = &item.keys else {
+            return item.keys.clone().unwrap_err().to_compile_error()
         };
 
-        let map_key = quote! { stringify!(#variant_ident).to_string() };
-        let map_value = quote! { (#keys_vec_string, #description_string) };
+        let variant_ident = &item.variant.ident;
+        let doc = &item.description;
 
-        map_entries.push(quote! { (#map_key, #map_value), });
+        map_entries.push(quote! {
+            (
+                #name::#variant_ident,
+                (
+                    vec![#(#keys),*].iter().map(|s| s.to_string()).collect::<Vec<String>>(),
+                    #doc.to_string()
+                )
+            ),
+        });
     }
 
     quote! {
         impl #name {
-            pub fn keymap_config() -> std::collections::HashMap<String, (Vec<String>, String)> {
+            pub fn keymap_config() -> std::collections::HashMap<#name, (Vec<String>, String)> {
                 std::collections::HashMap::from([
                     #(#map_entries)*
                 ])
@@ -281,13 +289,10 @@ fn parse_keys(variant: &Variant) -> Result<Vec<proc_macro2::TokenStream>, syn::E
             Ok(lit_strs) => {
                 for str in lit_strs {
                     // Directly use the string value, quote! will handle making it a literal
-                    // let s_val = lit_str.value();
-                    // keys.push(quote! { #s_val });
-
                     let val = str.value();
 
                     // Parse key sequence, and return early on error
-                    let parsed = parse_seq(&val).map_err(|err| {
+                    let _ = parse_seq(&val).map_err(|err| {
                         syn::Error::new(str.span(), format!("Invalid key: \"{val}\". {err}"))
                     })?;
 

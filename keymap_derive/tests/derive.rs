@@ -6,7 +6,7 @@ pub(crate) struct KeyMapInfo {
     pub description: &'static str,
 }
 
-#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Deserialize)]
+#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Hash, Deserialize)]
 enum Action {
     /// Create a new file.
     /// Multi-line support.
