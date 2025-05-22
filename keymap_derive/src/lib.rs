@@ -2,7 +2,7 @@
 //!
 //! The `KeyMap` derive macro automatically implements the `TryFrom<KeyMap>` trait for enums,
 //! allowing you to easily convert a `KeyMap` to an enum variant based on the specified key bindings.
-use keymap_parser::parse_seq;
+use keymap_parser::{parse_seq, Node};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{
@@ -55,13 +55,13 @@ pub fn keymap(input: TokenStream) -> TokenStream {
         .into();
     };
 
-    let try_from_impl = impl_try_from_keymap(&ast.ident, &variants);
     // let config_impl = impl_keymap_config(&ast.ident, &variants);
     let items = parse_items(&variants);
     let config = impl_keymap_config(&ast.ident, &items);
+    let try_from = impl_try_from_keymap(&ast.ident, &items);
 
     quote! {
-        #try_from_impl
+        #try_from
         #config
     }
     .into()
@@ -69,7 +69,7 @@ pub fn keymap(input: TokenStream) -> TokenStream {
 
 struct Item<'a> {
     variant: &'a Variant,
-    keys: Result<Vec<proc_macro2::TokenStream>, syn::Error>,
+    keys: Result<Vec<String>, syn::Error>,
     description: String,
 }
 
@@ -84,15 +84,12 @@ fn parse_items(variants: &Punctuated<Variant, Comma>) -> Vec<Item> {
         .collect::<Vec<_>>()
 }
 
-fn impl_keymap_config(
-    name: &Ident,
-    items: &Vec<Item>,
-) -> proc_macro2::TokenStream {
+fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
     let mut map_entries = Vec::new();
 
     for item in items {
         let Ok(keys) = &item.keys else {
-            return item.keys.clone().unwrap_err().to_compile_error()
+            return item.keys.clone().unwrap_err().to_compile_error();
         };
 
         let variant_ident = &item.variant.ident;
@@ -121,41 +118,92 @@ fn impl_keymap_config(
 }
 
 /// Implements [`TryFrom<KeyMap>`] for enums.
-fn impl_try_from_keymap(
-    name: &Ident,
-    variants: &Punctuated<Variant, Comma>,
-) -> proc_macro2::TokenStream {
-    match build_match_arms(name, variants) {
-        Ok(match_arms) => quote! {
-            use keymap::KeyMap;
+fn impl_try_from_keymap(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
+    let mut match_arms = vec![];
 
-            impl TryFrom<KeyMap> for #name {
-                type Error = String;
+    for item in items {
+        let Ok(keys) = &item.keys else {
+            return item.keys.clone().unwrap_err().to_compile_error();
+        };
 
-                /// Convert a [`KeyMap`] into an enum.
-                fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
-                    #name::try_from(vec![value])
-                }
+        let variant_ident = &item.variant.ident;
+
+        // Split string into a list of keys e.g.
+        //
+        // "a b" => [quote! { a }, quote! { b }]
+        let seq = keys
+            .iter()
+            .map(|key| key.split(' '))
+            .map(|seq| quote! { [#(#seq),*] });
+
+        // Build sequence of keys e.g.
+        //
+        // [quote! { a }, quote! { b }] => ["a", "b"]
+        match_arms.push(quote! {
+            #(#seq)|* => Ok(#name::#variant_ident),
+        });
+    }
+
+    quote! {
+        use keymap::KeyMap;
+
+        impl TryFrom<KeyMap> for #name {
+            type Error = String;
+
+            /// Convert a [`KeyMap`] into an enum.
+            fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
+                #name::try_from(vec![value])
             }
+        }
 
-            impl TryFrom<Vec<KeyMap>> for #name {
-                type Error = String;
+        impl TryFrom<Vec<KeyMap>> for #name {
+            type Error = String;
 
-                /// Convert a [`Vec<KeyMap>`] into an enum.
-                fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
-                    let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
+            /// Convert a [`Vec<KeyMap>`] into an enum.
+            fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
+                let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
 
-                    match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
-                        #(#match_arms)*
-                        _ => {
-                            Err(format!("Unknown key [{}]", keys.join(", ")))
-                        }
+                match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
+                    #(#match_arms)*
+                    _ => {
+                        Err(format!("Unknown key [{}]", keys.join(", ")))
                     }
                 }
             }
-        },
-        Err(err) => err.to_compile_error(),
+        }
+
     }
+    // match build_match_arms(name, variants) {
+    //     Ok(match_arms) => quote! {
+    //         use keymap::KeyMap;
+    //
+    //         impl TryFrom<KeyMap> for #name {
+    //             type Error = String;
+    //
+    //             /// Convert a [`KeyMap`] into an enum.
+    //             fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
+    //                 #name::try_from(vec![value])
+    //             }
+    //         }
+    //
+    //         impl TryFrom<Vec<KeyMap>> for #name {
+    //             type Error = String;
+    //
+    //             /// Convert a [`Vec<KeyMap>`] into an enum.
+    //             fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
+    //                 let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
+    //
+    //                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
+    //                     #(#match_arms)*
+    //                     _ => {
+    //                         Err(format!("Unknown key [{}]", keys.join(", ")))
+    //                     }
+    //                 }
+    //             }
+    //         }
+    //     },
+    //     Err(err) => err.to_compile_error(),
+    // }
 }
 
 /// Builds match arms from key attributes.
@@ -272,7 +320,7 @@ fn parse_doc(variant: &Variant) -> String {
     doc
 }
 
-fn parse_keys(variant: &Variant) -> Result<Vec<proc_macro2::TokenStream>, syn::Error> {
+fn parse_keys(variant: &Variant) -> Result<Vec<String>, syn::Error> {
     let mut keys = Vec::new();
 
     for attr in &variant.attrs {
@@ -296,7 +344,7 @@ fn parse_keys(variant: &Variant) -> Result<Vec<proc_macro2::TokenStream>, syn::E
                         syn::Error::new(str.span(), format!("Invalid key: \"{val}\". {err}"))
                     })?;
 
-                    keys.push(quote! { #val });
+                    keys.push(str.value());
 
                     // Split string into a list of keys e.g.
                     //
@@ -315,7 +363,7 @@ fn parse_keys(variant: &Variant) -> Result<Vec<proc_macro2::TokenStream>, syn::E
             }
             Err(err) => {
                 // Handle error or ignore if not critical for this specific function
-                keys.push(err.to_compile_error());
+                return Err(err);
             }
         }
     }
