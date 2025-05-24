@@ -5,9 +5,7 @@
 use item::{parse_items, Item};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{
-    DataEnum, DeriveInput, Ident,
-};
+use syn::{DataEnum, DeriveInput, Ident};
 
 mod item;
 
@@ -54,7 +52,6 @@ pub fn keymap(input: TokenStream) -> TokenStream {
 
     match parse_items(&variants) {
         Ok(items) => {
-            // let items = parse_items(&variants);
             let config = impl_keymap_config(&ast.ident, &items);
             let try_from = impl_try_from(&ast.ident, &items);
 
@@ -72,15 +69,15 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
     let mut map_entries = Vec::new();
 
     for item in items {
-        let variant_ident = &item.variant.ident;
+        let ident = &item.variant.ident;
         let keys = &item.keys;
         let doc = &item.description;
 
         map_entries.push(quote! {
             (
-                #name::#variant_ident,
-                (
-                    vec![#(#keys),*].iter().map(|s| s.to_string()).collect::<Vec<String>>(),
+                #name::#ident,
+                keymap::Item::new(
+                    vec![#(#keys),*].iter().map(ToString::to_string).collect::<Vec<String>>(),
                     #doc.to_string()
                 )
             ),
@@ -89,7 +86,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
 
     quote! {
         impl #name {
-            pub fn keymap_config() -> std::collections::HashMap<#name, (Vec<String>, String)> {
+            pub fn keymap_config() -> std::collections::HashMap<#name, keymap::Item> {
                 std::collections::HashMap::from([
                     #(#map_entries)*
                 ])

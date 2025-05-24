@@ -1,11 +1,5 @@
 use serde::Deserialize;
 
-#[derive(Debug, PartialEq)]
-pub(crate) struct KeyMapInfo {
-    pub keys: Vec<&'static str>,
-    pub description: &'static str,
-}
-
 #[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Hash, Deserialize)]
 enum Action {
     /// Create a new file.
@@ -24,6 +18,10 @@ struct Config {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
+    use keymap::Item;
+
     use super::*;
 
     const CONFIG: &str = include_str!("./config.toml");
@@ -33,35 +31,39 @@ mod tests {
         [
             (Action::Create, "enter"),
             (Action::Delete, "d"),
+            (Action::Delete, "d d"),
             (Action::Delete, "delete"),
         ]
         .map(|(action, input)| {
-            let key = keymap::parse(input).unwrap();
-            dbg!(Action::keymap_config());
+            let key = keymap::parse_seq(input).unwrap();
             assert_eq!(action, Action::try_from(key).unwrap());
         });
     }
 
     #[test]
-    fn test_derive_key_seq() {
-        [
-            (Action::Create, "ctrl-b n"),
-            (Action::Delete, "d d")
-        ].map(|(action, input)| {
-            let key = keymap::parse_seq(input).unwrap();
-            assert_eq!(action, Action::try_from(key).unwrap());
-        });
+    fn test_keymap_config() {
+        let config = Action::keymap_config();
+
+        assert_eq!(
+            config,
+            HashMap::from([
+                (
+                    Action::Create,
+                    Item::new(
+                        ["enter", "ctrl-b n"].map(ToString::to_string).to_vec(),
+                        "Create a new file.\nMulti-line support.".to_string()
+                    )
+                ),
+                (
+                    Action::Delete,
+                    Item::new(
+                        ["d", "delete", "d d"].map(ToString::to_string).to_vec(),
+                        "Delete a file".to_string()
+                    )
+                ),
+            ])
+        );
     }
-    // #[test]
-    // fn test_keymap_keys() {
-    //     [
-    //         (Action::Create, vec!["enter"]),
-    //         (Action::Delete, vec!["d", "delete"]),
-    //     ]
-    //     .map(|(action, keys)| {
-    //         assert_eq!(action.keymap_keys(), keys);
-    //     });
-    // }
 
     #[test]
     fn test_deserialize() {
