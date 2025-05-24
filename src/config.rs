@@ -1,7 +1,32 @@
-use std::{collections::HashMap, fmt::{Debug, Display}};
+use std::{
+    collections::HashMap,
+    fmt::{Debug, Display},
+};
 
-use serde::Deserialize;
 use crate::KeyMap;
+use serde::Deserialize;
+
+#[derive(Debug, Deserialize, Eq, PartialEq)]
+pub struct Item {
+    pub keys: Vec<String>,
+    pub description: String,
+}
+
+impl Item {
+    pub fn new(keys: Vec<String>, description: String) -> Self {
+        Self { keys, description }
+    }
+}
+
+// impl<'de> Deserialize<'de> for Item
+// {
+//     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+//     where
+//         D: serde::Deserializer<'de>,
+//     {
+//         HashMap::deserialize(deserializer).map(Item)
+//     }
+// }
 
 pub trait KeyMapConfig<V> {
     fn keymap_config() -> Config<V>;
@@ -16,13 +41,9 @@ trait Configure<V> {
 pub struct Config<V>(pub HashMap<KeyMap, V>);
 
 struct Test<V>(V);
-impl<V: Debug> Test<V> {
+impl<V: Debug> Test<V> {}
 
-}
-
-impl<V: Display> Test<V> {
-
-}
+impl<V: Display> Test<V> {}
 
 // impl<V, T: HashMap<String, V>> Configure<V> for T {
 //     fn get(&self, key: &KeyMap) -> Option<&V> {
@@ -108,6 +129,11 @@ mod tests {
 
     use super::*;
 
+    const ITEMS: &str = r#"
+    Create = { keys = ["c"], description = "Create a new item" }
+    Delete = { keys = ["d", "d d"], description = "Delete an item" }
+    "#;
+
     #[derive(Debug, Deserialize)]
     struct Config {
         keys: super::Config<Action>,
@@ -147,27 +173,58 @@ d = "Delete"
     }
 
     #[test]
+    fn test_deserialize_items() {
+        let items: HashMap<String, Item> = toml::from_str(ITEMS).unwrap();
+
+        assert_eq!(
+            items,
+            HashMap::from([
+                (
+                    "Create".to_string(),
+                    Item {
+                        keys: vec!["c".to_string()],
+                        description: "Create a new item".to_string()
+                    }
+                ),
+                (
+                    "Delete".to_string(),
+                    Item {
+                        keys: vec!["d".to_string(), "d d".to_string()],
+                        description: "Delete an item".to_string()
+                    }
+                ),
+            ])
+        );
+    }
+
+    #[test]
     fn test_deserialize_config() {
         let c: Config = toml::from_str(CONFIG).unwrap();
 
-        run(c.keys, &[
-            ("c", Some(Action::Create)),
-            ("d", Some(Action::Delete)),
-            ("n", None),
-            ("x", None),
-        ]);
+        run(
+            c.keys,
+            &[
+                ("c", Some(Action::Create)),
+                ("d", Some(Action::Delete)),
+                ("n", None),
+                ("x", None),
+            ],
+        );
     }
 
     #[test]
     fn test_deserialize_derived_config() {
         let c: DerivedConfig = toml::from_str(CONFIG).unwrap();
 
-        run(c.keys, &[
-            ("c", Some(Action::Create)),
-            ("d", Some(Action::Delete)),
-            ("n", Some(Action::Create)),
-            ("x", Some(Action::Delete)),
-        ]);
+        run(
+            c.keys,
+            &[
+                ("c", Some(Action::Create)),
+                ("d", Some(Action::Delete)),
+                ("n", Some(Action::Create)),
+                ("x", Some(Action::Delete)),
+            ],
+        );
     }
 
     #[test]
@@ -180,9 +237,9 @@ d = "Delete"
 
         let c: DerivedConfig = toml::from_str(CONFIG).unwrap();
 
-        run(c.keys, &[
-            ("n", Some(Action::Delete)),
-            ("x", Some(Action::Create)),
-        ]);
+        run(
+            c.keys,
+            &[("n", Some(Action::Delete)), ("x", Some(Action::Create))],
+        );
     }
 }

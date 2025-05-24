@@ -15,6 +15,8 @@ pub use self::termion::{KeyMap, parse};
 
 use keymap_parser::{Node, Modifiers};
 
+pub struct KeyMap2(Node);
+
 #[derive(Debug, Eq)]
 pub struct Key<T> {
     event: T,

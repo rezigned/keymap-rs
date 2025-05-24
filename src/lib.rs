@@ -5,7 +5,7 @@ pub use keymap_parser::parser;
 pub use backend::{parse, parse_seq, Key, KeyMap};
 mod config;
 
-pub use config::{Config, KeyMapConfig};
+pub use config::{Config, Item, KeyMapConfig};
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]

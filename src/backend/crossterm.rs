@@ -1,13 +1,19 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{de, Deserialize, Deserializer};
 
-use super::{Key, NodeModifiers};
+use super::{Key, KeyMap2, NodeModifiers};
 use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
 
 pub type KeyMap = Key<KeyEvent>;
 
 pub fn parse(s: &str) -> Result<KeyMap, pom::Error> {
     parser::parse(s).map(KeyMap::from)
+}
+
+impl From<KeyEvent> for KeyMap2 {
+    fn from(value: KeyEvent) -> Self {
+        Self(node_from_backend(value))
+    }
 }
 
 impl From<KeyEvent> for KeyMap {
@@ -96,25 +102,18 @@ const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
 
 impl From<KeyModifiers> for NodeModifiers {
     fn from(value: KeyModifiers) -> Self {
-        Self(MODIFIERS.into_iter().fold(0, |mut m, (m1, m2)| {
-            if value.contains(m1) {
-                m |= m2 as u8;
-            }
-            m
+        Self(MODIFIERS.into_iter().fold(0, |acc, (m1, m2)| {
+            acc | if value.contains(m1) { m2 as u8 } else { 0 }
         }))
     }
 }
 
 impl From<NodeModifiers> for KeyModifiers {
     fn from(value: NodeModifiers) -> Self {
-        MODIFIERS
-            .into_iter()
-            .fold(KeyModifiers::NONE, |mut m, (m1, m2)| {
-                if value.0 & m2 as u8 != 0 {
-                    m |= m1
-                }
-                m
-            })
+        let none = KeyModifiers::NONE;
+        MODIFIERS.into_iter().fold(none, |acc, (m1, m2)| {
+            acc | if value.0 & (m2 as u8) != 0 { m1 } else { none }
+        })
     }
 }
 
