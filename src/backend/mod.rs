@@ -3,18 +3,17 @@
 mod crossterm;
 
 #[cfg(feature = "crossterm")]
-pub use self::crossterm::{parse as crossterm_parse};
+pub use self::crossterm::parse as crossterm_parse;
 
 #[cfg(feature = "termion")]
 mod termion;
 
 #[cfg(feature = "termion")]
-// pub use self::termion::{parse};
-pub use self::termion::{parse as termion_parse};
+pub use self::termion::parse as termion_parse;
 
 use std::fmt;
 
-use keymap_parser::{Modifiers, Node};
+use keymap_parser::{parser::ParseError, Modifiers, Node};
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct KeyMap(Node);
@@ -31,11 +30,11 @@ impl fmt::Display for KeyMap {
     }
 }
 
-pub fn parse(s: &str) -> Result<KeyMap, pom::Error> {
+pub fn parse(s: &str) -> Result<KeyMap, ParseError> {
     keymap_parser::parse(s).map(KeyMap)
 }
 
-pub fn parse_seq(s: &str) -> Result<Vec<KeyMap>, pom::Error> {
+pub fn parse_seq(s: &str) -> Result<Vec<KeyMap>, ParseError> {
     keymap_parser::parse_seq(s).map(|v| v.into_iter().map(KeyMap).collect())
 }
 

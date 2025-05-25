@@ -3,11 +3,19 @@
 //! The `parser` module provides functionality for parsing input events from plain-text keymap definitions.
 //! It supports sequences like "ctrl-alt-f1" or "a b", mapping them to structured key/modifier representations.
 //!
-
-use std::str;
-use std::{fmt::Debug, str::FromStr};
-
+//! ## Grammar
+//!
+//! ```text
+//! node      = modifiers* key
+//! modifiers = modifier "-"
+//! modifier  = "ctrl" | "cmd" | "alt" | "shift"
+//! key       = fn-key | named-key | char
+//! fn-key    = "f" digit+
+//! named-key = "del" | "insert" | "end" | ...
+//! char      = ascii-char
+//! ```
 use crate::node::{KEY_SEP, Key, Modifier, Node};
+use std::str;
 
 /// Custom error type for parsing failures
 #[derive(Debug, PartialEq, Clone)]
@@ -18,7 +26,11 @@ pub struct ParseError {
 
 impl std::fmt::Display for ParseError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "Parse error at position {}: {}", self.position, self.message)
+        write!(
+            f,
+            "Parse error at position {}: {}",
+            self.position, self.message
+        )
     }
 }
 
@@ -56,6 +68,7 @@ impl<'a> Parser<'a> {
     }
 
     /// Consume a specific character, returning error if not found
+    #[allow(dead_code)]
     fn consume(&mut self, expected: char) -> Result<(), ParseError> {
         match self.next() {
             Some(ch) if ch == expected => Ok(()),
@@ -114,21 +127,21 @@ impl<'a> Parser<'a> {
 pub fn parse(s: &str) -> Result<Node, ParseError> {
     let mut parser = Parser::new(s);
     let node = parse_combination(&mut parser)?;
-    
+
     if !parser.is_at_end() {
         return Err(parser.error(format!(
             "expect end of input, found: {}",
             parser.peek().unwrap()
         )));
     }
-    
+
     Ok(node)
 }
 
 /// Parse a combination of modifiers followed by a key
 fn parse_combination(parser: &mut Parser) -> Result<Node, ParseError> {
     let mut modifiers = 0u8;
-    
+
     // Parse up to 4 modifiers
     for _ in 0..4 {
         if let Some(modifier) = try_parse_modifier(parser)? {
@@ -137,7 +150,7 @@ fn parse_combination(parser: &mut Parser) -> Result<Node, ParseError> {
             break;
         }
     }
-    
+
     let key = parse_key(parser)?;
     Ok(Node::new(modifiers, key))
 }
@@ -145,14 +158,14 @@ fn parse_combination(parser: &mut Parser) -> Result<Node, ParseError> {
 /// Try to parse a modifier, returning None if no modifier is found
 fn try_parse_modifier(parser: &mut Parser) -> Result<Option<Modifier>, ParseError> {
     let start_pos = parser.position;
-    
+
     // Try to parse a named modifier
     let name = parser.consume_while(|ch| ch.is_ascii_alphabetic());
-    
+
     if name.is_empty() {
         return Ok(None);
     }
-    
+
     let modifier = match name.parse::<Modifier>() {
         Ok(m) => m,
         Err(_) => {
@@ -161,10 +174,10 @@ fn try_parse_modifier(parser: &mut Parser) -> Result<Option<Modifier>, ParseErro
             return Ok(None);
         }
     };
-    
+
     // Check for optional separator
     parser.try_consume(KEY_SEP);
-    
+
     Ok(Some(modifier))
 }
 
@@ -184,19 +197,19 @@ fn parse_key(parser: &mut Parser) -> Result<Key, ParseError> {
 /// Try to parse a function key (f0-f12)
 fn try_parse_fn_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     let start_pos = parser.position;
-    
+
     if !parser.try_consume('f') {
         return Ok(None);
     }
-    
+
     // Parse the number
     let num_str = parser.consume_while(|ch| ch.is_ascii_digit());
-    
+
     if num_str.is_empty() {
         parser.position = start_pos;
         return Ok(None);
     }
-    
+
     match num_str.parse::<u8>() {
         Ok(n) if n <= 12 => Ok(Some(Key::F(n))),
         _ => {
@@ -209,14 +222,14 @@ fn try_parse_fn_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
 /// Try to parse a named key
 fn try_parse_named_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     let start_pos = parser.position;
-    
+
     let name = parser.consume_while(|ch| ch.is_ascii_alphabetic());
-    
+
     if name.len() < 2 {
         parser.position = start_pos;
         return Ok(None);
     }
-    
+
     match name.parse::<Key>() {
         Ok(key) => Ok(Some(key)),
         Err(_) => {
@@ -282,7 +295,7 @@ mod tests {
 
     use crate::parser::{Key, Modifier, Node};
 
-    use super::{parse, ParseError};
+    use super::{ParseError, parse};
 
     #[test]
     fn test_parse() {
@@ -296,22 +309,13 @@ mod tests {
         [
             ("alt-f", Ok(Node::new(Modifier::Alt as u8, Key::Char('f')))),
             ("space", Ok(Node::new(0, Key::Space))),
-            (
-                "delta",
-                err("expect end of input, found: e", 1),
-            ),
+            ("delta", err("expect end of input, found: e", 1)),
             (
                 "shift-a",
                 Ok(Node::new(Modifier::Shift as u8, Key::Char('a'))),
             ),
-            (
-                "shift-a-delete",
-                err("expect end of input, found: -", 7),
-            ),
-            (
-                "al",
-                err("expect end of input, found: l", 1),
-            ),
+            ("shift-a-delete", err("expect end of input, found: -", 7)),
+            ("al", err("expect end of input, found: l", 1)),
         ]
         .map(|(input, result)| {
             let output = parse(input);

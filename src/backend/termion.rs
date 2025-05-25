@@ -1,11 +1,11 @@
 use serde::{de, Deserialize, Deserializer};
 use termion::event::Key as KeyEvent;
 
-use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
+use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
 
 use super::KeyMap;
 
-pub fn parse(s: &str) -> Result<KeyEvent, pom::Error> {
+pub fn parse(s: &str) -> Result<KeyEvent, ParseError> {
     parser::parse(s).map(backend_from_node)
 }
 

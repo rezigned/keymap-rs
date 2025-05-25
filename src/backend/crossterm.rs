@@ -2,9 +2,9 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use serde::{de, Deserialize, Deserializer};
 
 use super::{KeyMap, NodeModifiers};
-use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
+use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
 
-pub fn parse(s: &str) -> Result<KeyEvent, pom::Error> {
+pub fn parse(s: &str) -> Result<KeyEvent, ParseError> {
     parser::parse(s).map(|node: Node| backend_from_node(&node))
 }
 
