@@ -7,108 +7,237 @@
 use std::str;
 use std::{fmt::Debug, str::FromStr};
 
-use pom::Error;
-use pom::parser::{Parser, end, is_a, one_of, sym};
-
 use crate::node::{KEY_SEP, Key, Modifier, Node};
+
+/// Custom error type for parsing failures
+#[derive(Debug, PartialEq, Clone)]
+pub struct ParseError {
+    pub message: String,
+    pub position: usize,
+}
+
+impl std::fmt::Display for ParseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Parse error at position {}: {}", self.position, self.message)
+    }
+}
+
+impl std::error::Error for ParseError {}
+
+/// Parser state for recursive descent parsing
+struct Parser<'a> {
+    input: &'a str,
+    position: usize,
+}
+
+impl<'a> Parser<'a> {
+    fn new(input: &'a str) -> Self {
+        Self { input, position: 0 }
+    }
+
+    /// Get the current character without consuming it
+    fn peek(&self) -> Option<char> {
+        self.input.chars().nth(self.position)
+    }
+
+    /// Get the current character and advance position
+    fn next(&mut self) -> Option<char> {
+        if let Some(ch) = self.peek() {
+            self.position += ch.len_utf8();
+            Some(ch)
+        } else {
+            None
+        }
+    }
+
+    /// Check if we're at the end of input
+    fn is_at_end(&self) -> bool {
+        self.position >= self.input.len()
+    }
+
+    /// Consume a specific character, returning error if not found
+    fn consume(&mut self, expected: char) -> Result<(), ParseError> {
+        match self.next() {
+            Some(ch) if ch == expected => Ok(()),
+            Some(ch) => Err(ParseError {
+                message: format!("expected '{}', found '{}'", expected, ch),
+                position: self.position - ch.len_utf8(),
+            }),
+            None => Err(ParseError {
+                message: format!("expected '{}', found end of input", expected),
+                position: self.position,
+            }),
+        }
+    }
+
+    /// Try to consume a specific character, returning true if successful
+    fn try_consume(&mut self, expected: char) -> bool {
+        if self.peek() == Some(expected) {
+            self.next();
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Consume characters while predicate is true
+    fn consume_while<F>(&mut self, predicate: F) -> String
+    where
+        F: Fn(char) -> bool,
+    {
+        let mut result = String::new();
+        while let Some(ch) = self.peek() {
+            if predicate(ch) {
+                result.push(ch);
+                self.next();
+            } else {
+                break;
+            }
+        }
+        result
+    }
+
+    /// Create an error at the current position
+    fn error(&self, message: String) -> ParseError {
+        ParseError {
+            message,
+            position: self.position,
+        }
+    }
+}
 
 /// Parses an input string representing a key or key combination into a [`Node`] on success.
 ///
 /// # Errors
 ///
-/// Returns an [`Error`] if the input cannot be parsed as a valid key or key combination.
-pub fn parse(s: &str) -> Result<Node, Error> {
-    let input = s.chars().collect::<Vec<char>>();
-    let result = node().parse(&input);
-
-    result
+/// Returns a [`ParseError`] if the input cannot be parsed as a valid key or key combination.
+pub fn parse(s: &str) -> Result<Node, ParseError> {
+    let mut parser = Parser::new(s);
+    let node = parse_combination(&mut parser)?;
+    
+    if !parser.is_at_end() {
+        return Err(parser.error(format!(
+            "expect end of input, found: {}",
+            parser.peek().unwrap()
+        )));
+    }
+    
+    Ok(node)
 }
 
-/// Top-level parser for a key combination node.
-///
-/// A node represents a combination of zero or more modifiers (e.g., ctrl, alt)
-/// and a key (e.g., 'a', 'esc', 'f1').
-///
-/**
-Grammar:
-    node      = modifiers* key
-    modifiers = modifier "-"
-    modifier  = "ctrl" | "cmd" | "alt" | "shift"
-    key       = fn-key | named-key | char
-    fn-key    = "f" digit
-    named-key = "up" | "esc" | "del" | ...
-    char      = "a..z" | "A..Z" | "0".."9" | ...
-*/
-fn node<'a>() -> Parser<'a, char, Node> {
-    combination() - end()
+/// Parse a combination of modifiers followed by a key
+fn parse_combination(parser: &mut Parser) -> Result<Node, ParseError> {
+    let mut modifiers = 0u8;
+    
+    // Parse up to 4 modifiers
+    for _ in 0..4 {
+        if let Some(modifier) = try_parse_modifier(parser)? {
+            modifiers |= modifier as u8;
+        } else {
+            break;
+        }
+    }
+    
+    let key = parse_key(parser)?;
+    Ok(Node::new(modifiers, key))
 }
 
-/// Parses a key (function key, named key, or character).
-fn key<'a>() -> Parser<'a, char, Key> {
-    fn_key() | named_key::<Key>() | char()
+/// Try to parse a modifier, returning None if no modifier is found
+fn try_parse_modifier(parser: &mut Parser) -> Result<Option<Modifier>, ParseError> {
+    let start_pos = parser.position;
+    
+    // Try to parse a named modifier
+    let name = parser.consume_while(|ch| ch.is_ascii_alphabetic());
+    
+    if name.is_empty() {
+        return Ok(None);
+    }
+    
+    let modifier = match name.parse::<Modifier>() {
+        Ok(m) => m,
+        Err(_) => {
+            // Not a modifier, reset position
+            parser.position = start_pos;
+            return Ok(None);
+        }
+    };
+    
+    // Check for optional separator
+    parser.try_consume(KEY_SEP);
+    
+    Ok(Some(modifier))
 }
 
-/// Parses a function key (e.g., "f1", "f12").
-///
-/// Accepts "f0" through "f12".
-fn fn_key<'a>() -> Parser<'a, char, Key> {
-    sym('f')
-        * ((sym('1') * one_of("012")).map(|n| 10 + n as u8) // "f10", "f11", or "f12"
-          | is_a(digit).map(|n| n as u8))                   // "f0" through "f9"
-            .map(|n| Key::F(n - 48)) // Adjust ASCII to digit value as needed
+/// Parse a key (function key, named key, or character)
+fn parse_key(parser: &mut Parser) -> Result<Key, ParseError> {
+    if let Some(fn_key) = try_parse_fn_key(parser)? {
+        Ok(fn_key)
+    } else if let Some(named_key) = try_parse_named_key(parser)? {
+        Ok(named_key)
+    } else if let Some(char_key) = try_parse_char(parser)? {
+        Ok(char_key)
+    } else {
+        Err(parser.error("expected a valid key".to_string()))
+    }
 }
 
-/// Parses a named key such as "up", "esc", or "del".
-fn named_key<'a, T>() -> Parser<'a, char, T>
-where
-    T: FromStr + 'static,
-    <T as FromStr>::Err: Debug,
-{
-    is_a(alpha)
-        .repeat(2..) // At least 2 alphabetic characters
-        .convert(|s| s.iter().collect::<String>().parse::<T>())
+/// Try to parse a function key (f0-f12)
+fn try_parse_fn_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
+    let start_pos = parser.position;
+    
+    if !parser.try_consume('f') {
+        return Ok(None);
+    }
+    
+    // Parse the number
+    let num_str = parser.consume_while(|ch| ch.is_ascii_digit());
+    
+    if num_str.is_empty() {
+        parser.position = start_pos;
+        return Ok(None);
+    }
+    
+    match num_str.parse::<u8>() {
+        Ok(n) if n <= 12 => Ok(Some(Key::F(n))),
+        _ => {
+            parser.position = start_pos;
+            Err(parser.error("invalid function key number (must be 0-12)".to_string()))
+        }
+    }
 }
 
-/// Parses a single ASCII character key (e.g., 'a', 'Z', '7').
-fn char<'a>() -> Parser<'a, char, Key> {
-    is_a(ascii).map(Key::Char)
+/// Try to parse a named key
+fn try_parse_named_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
+    let start_pos = parser.position;
+    
+    let name = parser.consume_while(|ch| ch.is_ascii_alphabetic());
+    
+    if name.len() < 2 {
+        parser.position = start_pos;
+        return Ok(None);
+    }
+    
+    match name.parse::<Key>() {
+        Ok(key) => Ok(Some(key)),
+        Err(_) => {
+            parser.position = start_pos;
+            Ok(None)
+        }
+    }
 }
 
-/// Parses a modifier key (e.g., "ctrl", "alt", "shift", "cmd").
-///
-/// Optionally allows for a trailing separator (e.g., "-").
-fn modifier<'a>() -> Parser<'a, char, Modifier> {
-    named_key::<Modifier>() - sym(KEY_SEP).opt()
-}
-
-/// Parses a combination of modifiers (up to 4) followed by a key (e.g., "ctrl-alt-a").
-///
-/// Returns a [`Node`] encoding the modifier bitmask and the key.
-fn combination<'a>() -> Parser<'a, char, Node> {
-    (modifier().repeat(..4) + key()).map(|(m, key)| {
-        // Combine modifiers using bitwise OR into a single u8
-        let mods = m.into_iter().fold(0, |l, r| l | r as u8);
-
-        Node::new(mods, key)
-    })
-}
-
-/// Returns true if the character is an ASCII alphabetic letter.
-#[inline]
-fn alpha(term: char) -> bool {
-    term.is_ascii_alphabetic()
-}
-
-/// Returns true if the character is any ASCII character.
-#[inline]
-fn ascii(term: char) -> bool {
-    term.is_ascii()
-}
-
-/// Returns true if the character is an ASCII digit ('0' - '9').
-#[inline]
-fn digit(term: char) -> bool {
-    term.is_ascii_digit()
+/// Try to parse a single character key
+fn try_parse_char(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
+    if let Some(ch) = parser.peek() {
+        if ch.is_ascii() {
+            parser.next();
+            Ok(Some(Key::Char(ch)))
+        } else {
+            Ok(None)
+        }
+    } else {
+        Ok(None)
+    }
 }
 
 /// Parses a whitespace-separated sequence of key expressions.
@@ -130,7 +259,7 @@ fn digit(term: char) -> bool {
 /// # Errors
 ///
 /// Returns an error if any portion of the sequence fails to parse.
-pub fn parse_seq(s: &str) -> Result<Vec<Node>, pom::Error> {
+pub fn parse_seq(s: &str) -> Result<Vec<Node>, ParseError> {
     str::split_whitespace(s).map(parse).collect()
 }
 
@@ -149,26 +278,27 @@ fn test_parse_seq() {
 
 #[cfg(test)]
 mod tests {
-    use pom::{Error, parser::end};
     use serde::Deserialize;
 
-    use crate::parser::{Key, Modifier, Node, named_key};
+    use crate::parser::{Key, Modifier, Node};
 
-    use super::{fn_key, parse};
+    use super::{parse, ParseError};
 
     #[test]
     fn test_parse() {
-        let err = |e| Err::<Node, Error>(e);
+        let err = |message: &str, position: usize| {
+            Err::<Node, ParseError>(ParseError {
+                message: message.to_string(),
+                position,
+            })
+        };
 
         [
             ("alt-f", Ok(Node::new(Modifier::Alt as u8, Key::Char('f')))),
             ("space", Ok(Node::new(0, Key::Space))),
             (
                 "delta",
-                err(Error::Mismatch {
-                    message: "expect end of input, found: e".into(),
-                    position: 1,
-                }),
+                err("expect end of input, found: e", 1),
             ),
             (
                 "shift-a",
@@ -176,17 +306,11 @@ mod tests {
             ),
             (
                 "shift-a-delete",
-                err(Error::Mismatch {
-                    message: "expect end of input, found: -".into(),
-                    position: 7,
-                }),
+                err("expect end of input, found: -", 7),
             ),
             (
                 "al",
-                err(Error::Mismatch {
-                    message: "expect end of input, found: l".into(),
-                    position: 1,
-                }),
+                err("expect end of input, found: l", 1),
             ),
         ]
         .map(|(input, result)| {
@@ -199,17 +323,15 @@ mod tests {
     fn test_parse_fn_key() {
         // Valid function key numbers: f0 - f12
         (0..=12).for_each(|n| {
-            let input = format!("f{n}").chars().collect::<Vec<char>>();
-            let result = (fn_key() - end()).parse(&input);
-
-            assert_eq!(Key::F(n), result.unwrap());
+            let input = format!("f{n}");
+            let result = parse(&input);
+            assert_eq!(Key::F(n), result.unwrap().key);
         });
 
         // Invalid: above f12
         [13, 15].map(|n| {
-            let input: Vec<char> = format!("f{n}").chars().collect();
-            let result = (fn_key() - end()).parse(&input);
-
+            let input = format!("f{n}");
+            let result = parse(&input);
             assert!(result.is_err());
         });
     }
@@ -218,9 +340,8 @@ mod tests {
     fn test_parse_enum() {
         // Check named keys
         [("up", Key::Up), ("esc", Key::Esc), ("del", Key::Delete)].map(|(s, key)| {
-            let input: Vec<char> = s.chars().collect();
-            let r = named_key::<Key>().parse(&input);
-            assert_eq!(r.unwrap(), key);
+            let result = parse(s);
+            assert_eq!(result.unwrap().key, key);
         });
     }
 

@@ -3,14 +3,16 @@
 mod crossterm;
 
 #[cfg(feature = "crossterm")]
-// pub use self::crossterm::{parse};
+pub use self::crossterm::{parse as crossterm_parse};
+
 #[cfg(feature = "termion")]
 mod termion;
 
-use std::fmt;
-
 #[cfg(feature = "termion")]
-pub use self::termion::{parse, KeyMap};
+// pub use self::termion::{parse};
+pub use self::termion::{parse as termion_parse};
+
+use std::fmt;
 
 use keymap_parser::{Modifiers, Node};
 

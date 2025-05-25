@@ -1,21 +1,17 @@
 use serde::{de, Deserialize, Deserializer};
 use termion::event::Key as KeyEvent;
 
-use super::Key;
 use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
 
-pub type KeyMap = Key<KeyEvent>;
+use super::KeyMap;
 
-pub fn parse(s: &str) -> Result<KeyMap, pom::Error> {
-    parser::parse(s).map(KeyMap::from)
+pub fn parse(s: &str) -> Result<KeyEvent, pom::Error> {
+    parser::parse(s).map(backend_from_node)
 }
 
 impl From<KeyEvent> for KeyMap {
     fn from(value: KeyEvent) -> Self {
-        Self {
-            event: value,
-            node: Some(node_from_backend(value)),
-        }
+        Self(node_from_backend(value))
     }
 }
 
@@ -48,50 +44,43 @@ fn node_from_backend(value: KeyEvent) -> Node {
     Node { key, modifiers }
 }
 
-impl From<Node> for KeyMap {
-    fn from(node: Node) -> Self {
-        let key = match node.key {
-            Keys::BackTab => KeyEvent::BackTab,
-            Keys::Backspace => KeyEvent::Backspace,
-            Keys::Delete => KeyEvent::Delete,
-            Keys::Down => KeyEvent::Down,
-            Keys::End => KeyEvent::End,
-            Keys::Enter => KeyEvent::Char('\n'),
-            Keys::Esc => KeyEvent::Esc,
-            Keys::Home => KeyEvent::Home,
-            Keys::F(n) => KeyEvent::F(n),
-            Keys::Insert => KeyEvent::Insert,
-            Keys::Left => KeyEvent::Left,
-            Keys::PageDown => KeyEvent::PageDown,
-            Keys::PageUp => KeyEvent::PageUp,
-            Keys::Right => KeyEvent::Right,
-            Keys::Space => KeyEvent::Char(' '),
-            Keys::Tab => KeyEvent::Char('\t'),
-            Keys::Up => KeyEvent::Up,
-            Keys::Char(c) => KeyEvent::Char(c),
-        };
+fn backend_from_node(node: Node) -> KeyEvent {
+    let key = match node.key {
+        Keys::BackTab => KeyEvent::BackTab,
+        Keys::Backspace => KeyEvent::Backspace,
+        Keys::Delete => KeyEvent::Delete,
+        Keys::Down => KeyEvent::Down,
+        Keys::End => KeyEvent::End,
+        Keys::Enter => KeyEvent::Char('\n'),
+        Keys::Esc => KeyEvent::Esc,
+        Keys::Home => KeyEvent::Home,
+        Keys::F(n) => KeyEvent::F(n),
+        Keys::Insert => KeyEvent::Insert,
+        Keys::Left => KeyEvent::Left,
+        Keys::PageDown => KeyEvent::PageDown,
+        Keys::PageUp => KeyEvent::PageUp,
+        Keys::Right => KeyEvent::Right,
+        Keys::Space => KeyEvent::Char(' '),
+        Keys::Tab => KeyEvent::Char('\t'),
+        Keys::Up => KeyEvent::Up,
+        Keys::Char(c) => KeyEvent::Char(c),
+    };
 
-        // Termion only allows modifier + char.
-        // It also doesn't support Shift/Meta key.
-        let event = match key {
-            KeyEvent::Char(c) => {
-                if node.modifiers & Modifier::Alt as u8 != 0 {
-                    KeyEvent::Alt(c)
-                } else if node.modifiers & Modifier::Ctrl as u8 != 0 {
-                    KeyEvent::Ctrl(c)
-                } else if node.modifiers & Modifier::Shift as u8 != 0 {
-                    KeyEvent::Char(c.to_ascii_uppercase())
-                } else {
-                    key
-                }
+    // Termion only allows modifier + char.
+    // It also doesn't support Shift/Meta key.
+    match key {
+        KeyEvent::Char(c) => {
+            if node.modifiers & Modifier::Alt as u8 != 0 {
+                KeyEvent::Alt(c)
+            } else if node.modifiers & Modifier::Ctrl as u8 != 0 {
+                KeyEvent::Ctrl(c)
+            } else if node.modifiers & Modifier::Shift as u8 != 0 {
+                KeyEvent::Char(c.to_ascii_uppercase())
+            } else {
+                key
             }
-            _ => key,
-        };
-
-        Self {
-            event,
-            node: Some(node),
         }
+        _ => key,
     }
 }
 
@@ -102,16 +91,15 @@ impl<'s> Deserialize<'s> for KeyMap {
         D: Deserializer<'s>,
     {
         let s = String::deserialize(deserializer)?;
-        parse(&s).map_err(de::Error::custom)
+        keymap_parser::parse(&s)
+            .map(KeyMap)
+            .map_err(de::Error::custom)
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use crate::{
-        backend::termion::{node_from_backend, parse},
-        Key,
-    };
+    use super::*;
     use keymap_parser as parser;
     use termion::event::Key as KeyEvent;
 
@@ -127,7 +115,7 @@ mod tests {
             ("ctrl-a", KeyEvent::Ctrl('a')),
         ]
         .map(|(s, node)| {
-            assert_eq!(Key::from(node), parse(s).unwrap());
+            assert_eq!(node, parse(s).unwrap());
         });
     }
 

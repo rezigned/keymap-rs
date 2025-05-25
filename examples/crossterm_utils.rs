@@ -4,12 +4,11 @@ use crossterm::{
     execute,
     style::Print,
 };
-use std::io;
 
 #[allow(unused)]
 #[cfg(feature = "crossterm")]
-pub(crate) fn output() -> impl FnMut(&str) -> io::Result<()> + 'static {
-    let mut stdout = io::stdout();
+pub(crate) fn output() -> impl FnMut(&str) -> std::io::Result<()> + 'static {
+    let mut stdout = std::io::stdout();
     move |s| execute!(stdout, Print(s), cursor::MoveToNextLine(1))
 }
 
