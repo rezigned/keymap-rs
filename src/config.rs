@@ -1,9 +1,5 @@
-use std::{
-    collections::HashMap,
-    fmt::Debug,
-};
+use std::fmt::Debug;
 
-use crate::KeyMap;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Eq, PartialEq)]
@@ -20,9 +16,8 @@ impl Item {
 
 #[cfg(test)]
 mod tests {
-    use crate::parse;
-
     use super::*;
+    use std::collections::HashMap;
 
     const ITEMS: &str = r#"
     Create = { keys = ["c"], description = "Create a new item" }
