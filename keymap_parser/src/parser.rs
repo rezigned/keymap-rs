@@ -1,25 +1,29 @@
 //! # Parser
 //!
-//! The `parser` module provides functionality for parsing input events from plain-text keymap definitions.
-//! It supports sequences like "ctrl-alt-f1" or "a b", mapping them to structured key/modifier representations.
+//! This module defines functionality for parsing plain-text keymap definitions into structured
+//! representations. It supports sequences such as `"ctrl-alt-f1"` or `"a b"` and maps them to
+//! key/modifier combinations.
 //!
-//! ## Grammar
+//! ## Supported Syntax
 //!
 //! ```text
 //! node      = modifiers* key
 //! modifiers = modifier "-"
 //! modifier  = "ctrl" | "cmd" | "alt" | "shift"
 //! key       = fn-key | named-key | group | char
-//! fn-key    = "f" digit+
+//! fn-key    = "f" digit digit?
 //! named-key = "del" | "insert" | "end" | ...
-//! char      = ascii-char
 //! group     = "@" ("digit" | "lower" | "upper" | "alnum" | "alpha" | "char")
+//! char      = ascii-char
 //! ```
+//!
+//! Each `Node` consists of optional modifier keys followed by a key identifier.
+
 use crate::node::{CharGroup, KEY_SEP, Key, Modifier, Node};
 
 type ParserFn<T> = fn(&mut Parser) -> Result<Option<T>, ParseError>;
 
-/// Custom error type for parsing failures
+/// Represents an error that occurred during parsing.
 #[derive(Debug, PartialEq, Clone)]
 pub struct ParseError {
     pub message: String,
@@ -38,7 +42,7 @@ impl std::fmt::Display for ParseError {
 
 impl std::error::Error for ParseError {}
 
-/// Parser state for recursive descent parsing
+/// Maintains the parser's state for recursive descent parsing.
 struct Parser<'a> {
     input: &'a str,
     position: usize,
@@ -50,23 +54,17 @@ impl<'a> Parser<'a> {
         Self { input, position: 0 }
     }
 
-    /// Returns the current character without consuming it.
-    ///
-    /// This does not advance the parser's position.
+    /// Peeks at the next character without consuming it.
     pub fn peek(&self) -> Option<char> {
         self.input.chars().next()
     }
 
-    /// Returns the character at the specified offset from the current position without consuming it.
-    ///
-    /// Returns `None` if the offset is out of bounds.
+    /// Peeks at the character `n` positions ahead without consuming it.
     pub fn peek_at(&self, n: usize) -> Option<char> {
         self.input.chars().nth(n)
     }
 
-    /// Returns the current character and advances the parser position.
-    ///
-    /// Returns `None` if the end of input is reached.
+    /// Consumes and returns the next character, advancing the parser.
     pub fn next(&mut self) -> Option<char> {
         if let Some(ch) = self.peek() {
             self.position += ch.len_utf8();
@@ -78,17 +76,16 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Returns `true` if the parser has reached the end of input.
+    /// Returns `true` if the parser has consumed all input.
     pub fn is_end(&self) -> bool {
         self.input.is_empty()
     }
 
-    /// Consumes the next character if it matches the expected character.
+    /// Consumes the next character if it matches the expected one.
     ///
     /// # Errors
     ///
-    /// Returns a [`ParseError`] if the next character does not match `expected`
-    /// or if the end of input is reached.
+    /// Returns a [`ParseError`] if the character doesn't match or if input is exhausted.
     pub fn take(&mut self, expected: char) -> Result<(), ParseError> {
         match self.next() {
             Some(ch) if ch == expected => Ok(()),
@@ -103,11 +100,9 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Attempts to parse using the provided function, rolling back on failure.
+    /// Attempts to parse with a fallback: restores state if parsing fails.
     ///
-    /// If `f` returns an error or `None`, the parser's state is restored to its original position.
-    ///
-    /// Returns `Ok(Some(T))` on success, or `Ok(None)` on failure.
+    /// Returns `Ok(Some(value))` if successful, or `Ok(None)` on failure.
     pub fn try_parse<T, F>(&mut self, f: F) -> Result<Option<T>, ParseError>
     where
         F: FnOnce(&mut Parser<'a>) -> Result<Option<T>, ParseError>,
@@ -123,9 +118,7 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Consumes and collects characters while the given predicate returns `true`.
-    ///
-    /// Returns a `String` of all consumed characters.
+    /// Consumes and returns characters that satisfy a predicate.
     pub fn take_while<F>(&mut self, predicate: F) -> String
     where
         F: Fn(char) -> bool,
@@ -144,9 +137,7 @@ impl<'a> Parser<'a> {
         result
     }
 
-    /// Tries multiple parser functions in order, returning the result of the first that succeeds.
-    ///
-    /// Returns `Ok(Some(T))` on success, or `Ok(None)` if all parsers fail.
+    /// Tries multiple parsers in sequence, returning the result of the first successful one.
     pub fn alt<T>(&mut self, parsers: &[ParserFn<T>]) -> Result<Option<T>, ParseError> {
         for p in parsers {
             match p(self)? {
@@ -158,7 +149,7 @@ impl<'a> Parser<'a> {
         Ok(None)
     }
 
-    /// Creates a `ParseError` with the given message at the current parser position.
+    /// Creates a [`ParseError`] with the current parser position.
     pub fn error(&self, message: String) -> ParseError {
         ParseError {
             message,
@@ -167,11 +158,22 @@ impl<'a> Parser<'a> {
     }
 }
 
-/// Parses an input string representing a key or key combination into a [`Node`] on success.
+/// Parses a single key expression into a [`Node`].
+///
+/// Accepts strings like `"ctrl-b"`, `"@digit"`, or `"f1"`.
 ///
 /// # Errors
 ///
-/// Returns a [`ParseError`] if the input cannot be parsed as a valid key or key combination.
+/// Returns a [`ParseError`] if the input does not match the expected grammar.
+///
+/// # Examples
+///
+/// ```
+/// use keymap_parser::{parse, Node, Key, Modifier};
+///
+/// let node = parse("ctrl-a").unwrap();
+/// assert_eq!(node, Node::new(Modifier::Ctrl as u8, Key::Char('a')));
+/// ```
 pub fn parse(s: &str) -> Result<Node, ParseError> {
     let mut parser = Parser::new(s);
     let node = parse_node(&mut parser)?;
@@ -186,15 +188,12 @@ pub fn parse(s: &str) -> Result<Node, ParseError> {
     Ok(node)
 }
 
-/// Parses a combination of modifiers followed by a key
+/// Parses a key combination with optional modifiers followed by a key.
 ///
-/// node      = modifiers* key
-/// modifiers = modifier "-"
-/// modifier  = "ctrl" | "cmd" | "alt" | "shift"
+/// Grammar: `node = modifiers* key`
 fn parse_node(parser: &mut Parser) -> Result<Node, ParseError> {
     let mut modifiers = 0u8;
 
-    // Parse up to 4 modifiers
     for _ in 0..4 {
         if let Some(modifier) = try_parse_modifier(parser)? {
             modifiers |= modifier as u8;
@@ -207,30 +206,24 @@ fn parse_node(parser: &mut Parser) -> Result<Node, ParseError> {
     Ok(Node::new(modifiers, key))
 }
 
-/// Try to parse a modifier, returning None if no modifier is found
+/// Attempts to parse a single modifier, followed by a `-`.
 ///
-/// modifiers = modifier "-"
+/// Returns `None` if no valid modifier is found.
 fn try_parse_modifier(parser: &mut Parser) -> Result<Option<Modifier>, ParseError> {
     parser.try_parse(|p| {
-        // Try to parse a named modifier
         let name = p.take_while(|ch| ch.is_ascii_alphabetic());
         let modifier = match name.parse::<Modifier>() {
             Ok(m) => m,
-            Err(_) => {
-                return Ok(None);
-            }
+            Err(_) => return Ok(None),
         };
 
-        // Parse separator
         p.take(KEY_SEP)?;
 
         Ok(Some(modifier))
     })
 }
 
-/// Parse a key (function key, named key, or character)
-///
-/// key = fn-key | named-key | char
+/// Parses a key value, which may be a function key, named key, character group, or ASCII char.
 fn parse_key(parser: &mut Parser) -> Result<Key, ParseError> {
     match parser.alt(&[
         try_parse_fn_key,
@@ -243,9 +236,7 @@ fn parse_key(parser: &mut Parser) -> Result<Key, ParseError> {
     }
 }
 
-/// Try to parse a function key (f0-f12)
-///
-/// fn-key = "f" digit+
+/// Attempts to parse a function key (e.g., `"f1"` to `"f12"`).
 fn try_parse_fn_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     if parser.peek() != Some('f') || parser.peek_at(1).is_none() {
         return Ok(None);
@@ -253,7 +244,6 @@ fn try_parse_fn_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
 
     parser.take('f')?;
     parser.try_parse(|p| {
-        // Parse the number 0-12
         let num = p.take_while(|ch| ch.is_ascii_digit());
         match num.parse::<u8>() {
             Ok(n) if n <= 12 => Ok(Some(Key::F(n))),
@@ -262,9 +252,7 @@ fn try_parse_fn_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     })
 }
 
-/// Try to parse a named key
-///
-/// named-key = "del" | "insert" | "end" | ...
+/// Attempts to parse a named key such as `"del"`, `"insert"`, or `"end"`.
 fn try_parse_named_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     parser.try_parse(|p| {
         let name = p.take_while(|ch| ch.is_ascii_alphabetic());
@@ -279,16 +267,13 @@ fn try_parse_named_key(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     })
 }
 
-/// Try to parse a character group (@digit, @lower, etc.)
+/// Attempts to parse a character group like `"@digit"` or `"@lower"`.
 fn try_parse_group(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     if parser.peek() != Some('@') || parser.peek_at(1).is_none() {
         return Ok(None);
     }
 
-    // Consume the '@' symbol
     parser.take('@')?;
-
-    // Parse the group name
     let group_name = parser.take_while(|ch| ch.is_ascii_alphabetic());
     let group = match group_name.as_str() {
         "digit" => Key::Group(CharGroup::Digit),
@@ -297,17 +282,14 @@ fn try_parse_group(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
         "alnum" => Key::Group(CharGroup::Alnum),
         "alpha" => Key::Group(CharGroup::Alpha),
         "char" => Key::Group(CharGroup::Char),
-        _ => {
-            return Err(parser.error(format!("unknown character group: '{group_name}'",)));
-        }
+        _ => return Err(parser.error(format!("unknown character group: '{group_name}'"))),
     };
 
     Ok(Some(group))
 }
 
-/// Try to parse a single character key or character group
+/// Attempts to parse a single ASCII character as a key.
 fn try_parse_char(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
-    // Parse regular ASCII character
     if let Some(ch) = parser.peek() {
         if ch.is_ascii() {
             parser.next();
@@ -322,12 +304,16 @@ fn try_parse_char(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
 
 /// Parses a whitespace-separated sequence of key expressions.
 ///
-/// Splits the input string on whitespace and parses each part as a [`Node`].
+/// Each part is parsed as a [`Node`].
+///
+/// # Errors
+///
+/// Returns a [`ParseError`] if any segment fails to parse.
 ///
 /// # Examples
 ///
 /// ```
-/// use keymap_parser::{parse_seq, Node, Key};
+/// use keymap_parser::{parse_seq, Key, Node};
 ///
 /// let seq = parse_seq("a b").unwrap();
 /// assert_eq!(
@@ -335,10 +321,6 @@ fn try_parse_char(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
 ///     vec![Node::from(Key::Char('a')), Node::from(Key::Char('b'))]
 /// );
 /// ```
-///
-/// # Errors
-///
-/// Returns an error if any portion of the sequence fails to parse.
 pub fn parse_seq(s: &str) -> Result<Vec<Node>, ParseError> {
     str::split_whitespace(s).map(parse).collect()
 }

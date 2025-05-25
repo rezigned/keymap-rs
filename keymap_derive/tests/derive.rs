@@ -62,7 +62,7 @@ mod tests {
                 (
                     Action::Delete,
                     Item::new(
-                        ["d", "delete", "d d"].map(ToString::to_string).to_vec(),
+                        ["d", "delete", "d d", "@lower", "@digit"].map(ToString::to_string).to_vec(),
                         "Delete a file".to_string()
                     )
                 ),

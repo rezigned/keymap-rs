@@ -3,7 +3,7 @@
 //! The `KeyMap` derive macro automatically implements the `TryFrom<KeyMap>` trait for enums,
 //! allowing you to easily convert a `KeyMap` to an enum variant based on the specified key bindings.
 use item::{parse_items, Item};
-use keymap_parser::{node::CharGroup, Key, Node};
+use keymap_parser::{node::CharGroup, Key};
 use proc_macro::TokenStream;
 use quote::quote;
 use syn::{DataEnum, DeriveInput, Ident};
@@ -206,12 +206,10 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
                         // Match char group e.g. @digit, @alpha, etc.
                         match [char.chars().next().unwrap()] {
                             #(#char_group_match_arms)*
-                            _ =>
-                        ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
+                            _ => ::std::result::Result::Err(format!("Unknown key [{char}]"))
                         }
                     }
-                    _ =>
-                        ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
+                    _ => ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
                 }
             }
         }
