@@ -2,7 +2,7 @@
 pub mod backend;
 pub use keymap_parser::parser;
 
-pub use backend::{parse, parse_seq, Key, KeyMap};
+pub use backend::{parse, parse_seq, KeyMap};
 mod config;
 
 pub use config::{Config, Item, KeyMapConfig};

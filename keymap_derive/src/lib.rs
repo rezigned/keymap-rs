@@ -66,14 +66,14 @@ pub fn keymap(input: TokenStream) -> TokenStream {
 }
 
 fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
-    let mut map_entries = Vec::new();
+    let mut entries = Vec::new();
 
     for item in items {
         let ident = &item.variant.ident;
         let keys = &item.keys;
         let doc = &item.description;
 
-        map_entries.push(quote! {
+        entries.push(quote! {
             (
                 #name::#ident,
                 keymap::Item::new(
@@ -86,10 +86,8 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
 
     quote! {
         impl #name {
-            pub fn keymap_config() -> std::collections::HashMap<#name, keymap::Item> {
-                std::collections::HashMap::from([
-                    #(#map_entries)*
-                ])
+            pub fn keymap_config() -> Vec<(#name, keymap::Item)> {
+                vec![#(#entries)*]
             }
         }
     }

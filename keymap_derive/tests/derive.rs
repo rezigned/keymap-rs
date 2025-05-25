@@ -18,8 +18,6 @@ struct Config {
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashMap;
-
     use keymap::Item;
 
     use super::*;
@@ -46,7 +44,7 @@ mod tests {
 
         assert_eq!(
             config,
-            HashMap::from([
+            vec![
                 (
                     Action::Create,
                     Item::new(
@@ -61,7 +59,7 @@ mod tests {
                         "Delete a file".to_string()
                     )
                 ),
-            ])
+            ]
         );
     }
 

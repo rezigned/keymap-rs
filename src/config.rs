@@ -1,6 +1,6 @@
 use std::{
     collections::HashMap,
-    fmt::{Debug, Display},
+    fmt::Debug,
 };
 
 use crate::KeyMap;
@@ -39,11 +39,6 @@ trait Configure<V> {
 
 #[derive(Debug)]
 pub struct Config<V>(pub HashMap<KeyMap, V>);
-
-struct Test<V>(V);
-impl<V: Debug> Test<V> {}
-
-impl<V: Display> Test<V> {}
 
 // impl<V, T: HashMap<String, V>> Configure<V> for T {
 //     fn get(&self, key: &KeyMap) -> Option<&V> {
