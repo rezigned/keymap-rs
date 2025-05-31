@@ -1,5 +1,5 @@
 use keymap_parser::parse_seq;
-use syn::{punctuated::Punctuated, token::Comma, LitStr, Token, Variant};
+use syn::{punctuated::Punctuated, token::Comma, Attribute, LitStr, Token, Variant};
 
 /// An attribute path name #[key(...)]
 const KEY_IDENT: &str = "key";
@@ -26,31 +26,36 @@ pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<I
 }
 
 fn parse_doc(variant: &Variant) -> String {
-    let mut doc = String::new();
-
-    for attr in &variant.attrs {
-        if !attr.path().is_ident(DOC_IDENT) {
-            continue;
-        }
-
-        // Parse name-value pair e.g. #[doc = "..."]
-        if let syn::Meta::NameValue(meta_name_value) = &attr.meta {
-            if let syn::Expr::Lit(expr_lit) = &meta_name_value.value {
-                if let syn::Lit::Str(lit_str) = &expr_lit.lit {
-                    let doc_line = lit_str.value().trim().to_string();
-                    if !doc.is_empty() {
-                        doc.push('\n');
-                    }
-                    doc.push_str(&doc_line);
-                }
-            }
-        }
-    }
-
-    doc
+    variant
+        .attrs
+        .iter()
+        .filter(|attr| attr.path().is_ident(DOC_IDENT))
+        .filter_map(|attr| match &attr.meta {
+            syn::Meta::NameValue(nv) => match &nv.value {
+                syn::Expr::Lit(syn::ExprLit {
+                    lit: syn::Lit::Str(lit_str),
+                    ..
+                }) => Some(lit_str.value().trim().to_string()),
+                _ => None,
+            },
+            _ => None,
+        })
+        .collect::<Vec<_>>()
+        .join("\n")
 }
 
-fn parse_keys(variant: &Variant) -> Result<Vec<String>, syn::Error> {
+/// Parse attribute arguments.
+///
+/// Example:
+///
+/// #[key("a", "g g")]
+///    |  |________|
+///  path   (args)
+fn parse_args(attr: &Attribute) -> syn::Result<Punctuated<LitStr, Token![,]>> {
+    attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty)
+}
+
+fn parse_keys(variant: &Variant) -> syn::Result<Vec<String>> {
     let mut keys = Vec::new();
 
     for attr in &variant.attrs {
@@ -58,28 +63,15 @@ fn parse_keys(variant: &Variant) -> Result<Vec<String>, syn::Error> {
             continue;
         }
 
-        // Parse #[key("a", "g g")] directly into list of LitStr
-        //          |  |________|
-        //        path   (args)
+        // Collect arguments
         //
         // e.g. [["a"], ["g g"]]
-        match attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty) {
-            Ok(lit_strs) => {
-                for str in lit_strs {
-                    // Directly use the string value, quote! will handle making it a literal
-                    let val = str.value();
+        for arg in parse_args(attr)? {
+            let val = arg.value();
+            parse_seq(&val)
+                .map_err(|e| syn::Error::new(arg.span(), format!("Invalid key \"{val}\": {e}")))?;
 
-                    // Parse key sequence, and return early on error
-                    let _ = parse_seq(&val).map_err(|err| {
-                        syn::Error::new(str.span(), format!("Invalid key: \"{val}\". {err}"))
-                    })?;
-
-                    keys.push(val);
-                }
-            }
-            Err(err) => {
-                return Err(err);
-            }
+            keys.push(val);
         }
     }
 
