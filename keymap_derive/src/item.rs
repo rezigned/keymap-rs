@@ -15,6 +15,13 @@ pub(crate) struct Item<'a> {
 pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<Item>, syn::Error> {
     variants
         .iter()
+        .filter(|variant| {
+            // Only keep variants with #[key(...)]
+            variant
+                .attrs
+                .iter()
+                .any(|attr| attr.path().is_ident(KEY_IDENT))
+        })
         .map(|variant| {
             Ok(Item {
                 variant,

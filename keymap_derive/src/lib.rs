@@ -126,14 +126,14 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
         let keys = item
             .keys
             .iter()
-            .map(|key| key.split(' '))
+            .map(|key| key.split_whitespace())
             .map(|seq| quote! { [#(#seq),*] });
 
         // Build match arms e.g.
         //
         // ["x"] | ["d", "d"] => Action::Delete
         match_arms.push(quote! {
-            #(#keys)|* => Ok(#name::#ident),
+            #(#keys)|* => ::std::result::Result::Ok(#name::#ident),
         });
     }
 
@@ -144,7 +144,7 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
             type Error = String;
 
             /// Convert a [`KeyMap`] into an enum.
-            fn try_from(value: keymap::KeyMap) -> Result<Self, Self::Error> {
+            fn try_from(value: keymap::KeyMap) -> ::std::result::Result<Self, Self::Error> {
                 #name::try_from(vec![value])
             }
         }
@@ -153,13 +153,13 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
             type Error = String;
 
             /// Convert a [`Vec<KeyMap>`] into an enum.
-            fn try_from(value: Vec<keymap::KeyMap>) -> Result<Self, Self::Error> {
+            fn try_from(value: Vec<keymap::KeyMap>) -> ::std::result::Result<Self, Self::Error> {
                 let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
 
                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
                     #(#match_arms)*
                     _ => {
-                        Err(format!("Unknown key [{}]", keys.join(", ")))
+                        ::std::result::Result::Err(format!("Unknown key [{}]", keys.join(", ")))
                     }
                 }
             }
