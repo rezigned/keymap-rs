@@ -9,6 +9,9 @@ enum Action {
     /// Delete a file
     #[key("d", "delete", "d d", "@lower", "@digit")]
     Delete,
+    /// Quit
+    #[key("@any")]
+    Quit,
 }
 
 #[cfg(test)]
@@ -62,6 +65,13 @@ mod tests {
                     Item::new(
                         ["d", "delete", "d d", "@lower", "@digit"].map(ToString::to_string).to_vec(),
                         "Delete a file".to_string()
+                    )
+                ),
+                (
+                    Action::Quit,
+                    Item::new(
+                        ["@any"].map(ToString::to_string).to_vec(),
+                        "Quit".to_string()
                     )
                 ),
             ]

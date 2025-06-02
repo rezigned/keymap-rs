@@ -3,7 +3,7 @@ use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::fmt;
+use std::{collections::BTreeMap, fmt};
 use std::marker::PhantomData;
 use std::{collections::HashMap, ops::Deref};
 
@@ -23,9 +23,14 @@ pub trait KeyMapConfig<T> {
 /// The internal `keys` map avoids cloning `T` by indexing into the `items` list.
 #[derive(Debug)]
 pub struct Config<T> {
+    /// A list of `(T, Item)` pairs.
     pub items: Vec<(T, Item)>,
+
+    /// A map of keys to their index in the `items` list.
     keys: HashMap<String, usize>,
-    groups: HashMap<String, usize>,
+
+    /// An ordered map of group names.
+    groups: BTreeMap<String, usize>,
 }
 
 /// A variant of [`Config`] that merges user-defined and default entries.
@@ -77,6 +82,7 @@ impl<T> Config<T> {
             .and_then(|&idx| self.items.get(idx))
             .map(|(t, item)| (t, item))
             .or_else(|| {
+                // Group's order is important, thus, the BTreeMap is used.
                 self.groups
                     .iter()
                     .find(|(group, _)| match group.as_str() {
@@ -85,6 +91,7 @@ impl<T> Config<T> {
                         "@digit" => key.chars().all(|c| c.is_ascii_digit()),
                         "@alpha" => key.chars().all(|c| c.is_alphabetic()),
                         "@alnum" => key.chars().all(|c| c.is_alphanumeric()),
+                        "@any" => true,
                         _ => false,
                     })
                     .and_then(|(_, &idx)| self.items.get(idx))
@@ -129,7 +136,7 @@ where
             {
                 let mut items = Vec::new();
                 let mut keys = HashMap::new();
-                let mut groups = HashMap::new();
+                let mut groups = BTreeMap::new();
 
                 while let Some((key, item)) = map.next_entry::<T, Item>()? {
                     let item_index = items.len();
@@ -191,7 +198,7 @@ where
             {
                 let mut items: HashMap<T, Item> = T::keymap_config().into_iter().collect();
                 let mut keys = HashMap::new();
-                let mut groups = HashMap::new();
+                let mut groups = BTreeMap::new();
 
                 // Merge derived items with config items
                 while let Some((key, item)) = map.next_entry::<T, Item>()? {

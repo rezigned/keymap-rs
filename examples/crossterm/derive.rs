@@ -31,7 +31,7 @@ fn main() -> io::Result<()> {
                         send(format!("{action:?}"))?
                     }
                 },
-                Err(e) => send(format!("Unknown key {e}"))?,
+                Err(e) => send(e.to_string())?,
             }
         }
     }

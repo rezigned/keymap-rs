@@ -5,7 +5,7 @@ use serde::Deserialize;
 #[derive(Debug, keymap::KeyMap, Deserialize, Hash, PartialEq, Eq)]
 pub(crate) enum Action {
     /// Jump over obstacles
-    #[key("space", "ctrl-g")]
+    #[key("space", "@digit")]
     Jump,
 
     /// Climb or move up
@@ -34,6 +34,7 @@ pub(crate) enum Action {
 pub(crate) const DERIVED_CONFIG: &str = r#"
 Jump = { keys = ["j"], description = "Jump Jump!" }
 Up = { keys = ["u"], description = "Fly!" }
+Quit = { keys = ["@any"], description = "Quit!" }
 "#;
 
 #[allow(unused)]

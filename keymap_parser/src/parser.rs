@@ -13,13 +13,13 @@
 //! key       = fn-key | named-key | group | char
 //! fn-key    = "f" digit digit?
 //! named-key = "del" | "insert" | "end" | ...
-//! group     = "@" ("digit" | "lower" | "upper" | "alnum" | "alpha" | "char")
+//! group     = "@" ("digit" | "lower" | "upper" | "alnum" | "alpha" | "any")
 //! char      = ascii-char
 //! ```
 //!
 //! Each `Node` consists of optional modifier keys followed by a key identifier.
 
-use crate::node::{CharGroup, KEY_SEP, Key, Modifier, Node};
+use crate::node::{CharGroup, Key, Modifier, Node, KEY_SEP};
 
 type ParserFn<T> = fn(&mut Parser) -> Result<Option<T>, ParseError>;
 
@@ -274,15 +274,11 @@ fn try_parse_group(parser: &mut Parser) -> Result<Option<Key>, ParseError> {
     }
 
     parser.take('@')?;
+
     let group_name = parser.take_while(|ch| ch.is_ascii_alphabetic());
-    let group = match group_name.as_str() {
-        "digit" => Key::Group(CharGroup::Digit),
-        "lower" => Key::Group(CharGroup::Lower),
-        "upper" => Key::Group(CharGroup::Upper),
-        "alnum" => Key::Group(CharGroup::Alnum),
-        "alpha" => Key::Group(CharGroup::Alpha),
-        "char" => Key::Group(CharGroup::Char),
-        _ => return Err(parser.error(format!("unknown character group: '{group_name}'"))),
+    let group = match group_name.parse::<CharGroup>() {
+        Ok(group) => Key::Group(group),
+        Err(_) => return Err(parser.error(format!("unknown char group: '@{group_name}'"))),
     };
 
     Ok(Some(group))
@@ -344,7 +340,7 @@ mod tests {
 
     use crate::parser::{CharGroup, Key, Modifier, Node};
 
-    use super::{ParseError, parse};
+    use super::{parse, ParseError};
 
     #[test]
     fn test_parse() {
@@ -404,9 +400,9 @@ mod tests {
             ("@digit", Key::Group(CharGroup::Digit)),
             ("@lower", Key::Group(CharGroup::Lower)),
             ("@upper", Key::Group(CharGroup::Upper)),
-            ("@alnum", Key::Group(CharGroup::Alnum)),
             ("@alpha", Key::Group(CharGroup::Alpha)),
-            ("@char", Key::Group(CharGroup::Char)),
+            ("@alnum", Key::Group(CharGroup::Alnum)),
+            ("@any", Key::Group(CharGroup::Any)),
         ]
         .map(|(input, expected_key)| {
             let result = parse(input);
@@ -416,22 +412,18 @@ mod tests {
         // Test invalid group names
         let result = parse("@invalid");
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .message
-                .contains("unknown character group")
-        );
+        assert!(result
+            .unwrap_err()
+            .message
+            .contains("unknown char group: '@invalid'"));
 
         // Test incomplete group syntax
         let result = parse("@x");
         assert!(result.is_err());
-        assert!(
-            result
-                .unwrap_err()
-                .message
-                .contains("unknown character group: 'x'")
-        );
+        assert!(result
+            .unwrap_err()
+            .message
+            .contains("unknown char group: '@x'"));
     }
 
     #[test]

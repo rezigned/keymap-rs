@@ -7,7 +7,7 @@ use std::{
     ops::BitOr,
 };
 
-use serde::{Deserialize, Deserializer, de};
+use serde::{de, Deserialize, Deserializer};
 use strum_macros::{AsRefStr, Display, EnumString};
 
 use crate::parse;
@@ -125,11 +125,13 @@ pub enum Key {
     /// Up arrow key.
     Up,
     /// Group
+    #[strum(disabled)]
     Group(CharGroup),
 }
 
 /// Character group types for pattern matching
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
+#[strum(serialize_all = "lowercase")]
 pub enum CharGroup {
     /// Matches ASCII digits (0-9)
     Digit,
@@ -137,27 +139,36 @@ pub enum CharGroup {
     Lower,
     /// Matches uppercase ASCII letters (A-Z)
     Upper,
-    /// Matches alphanumeric ASCII characters (a-z, A-Z, 0-9)
-    Alnum,
     /// Matches ASCII letters (a-z, A-Z)
     Alpha,
-    /// Matches any ASCII character
-    Char,
+    /// Matches alphanumeric ASCII characters (a-z, A-Z, 0-9)
+    Alnum,
+    /// Matches any character
+    Any,
+}
 
-    #[default]
-    None,
+impl CharGroup {
+    pub fn matches(&self, c: char) -> bool {
+        match self {
+            CharGroup::Digit => c.is_ascii_digit(),
+            CharGroup::Lower => c.is_ascii_lowercase(),
+            CharGroup::Upper => c.is_ascii_uppercase(),
+            CharGroup::Alpha => c.is_ascii_alphabetic(),
+            CharGroup::Alnum => c.is_ascii_alphanumeric(),
+            CharGroup::Any => true,
+        }
+    }
 }
 
 impl std::fmt::Display for CharGroup {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let name = match self {
-            CharGroup::Digit => "digit",
-            CharGroup::Lower => "lower",
-            CharGroup::Upper => "upper",
-            CharGroup::Alnum => "alnum",
-            CharGroup::Alpha => "alpha",
-            CharGroup::Char => "char",
-            _ => "none",
+            Self::Digit => "digit",
+            Self::Lower => "lower",
+            Self::Upper => "upper",
+            Self::Alpha => "alpha",
+            Self::Alnum => "alnum",
+            Self::Any => "any",
         };
         write!(f, "@{}", name)
     }
