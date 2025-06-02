@@ -3,12 +3,22 @@ use termion::event::Key as KeyEvent;
 
 use keymap_parser::{self as parser, Key, Modifier, Node};
 
-use crate::{Error, KeyMap};
+use crate::{Config, Error, Item, KeyMap};
 
 pub fn parse(s: &str) -> Result<KeyEvent, Error> {
     parser::parse(s)
         .map_err(Error::Parse)
         .and_then(backend_from_node)
+}
+
+impl<T> Config<T> {
+    pub fn get(&self, key: KeyEvent) -> Option<&T> {
+        self.get_by_keymap(&key.try_into().ok()?)
+    }
+
+    pub fn get_item(&self, key: KeyEvent) -> Option<(&T, &Item)> {
+        self.get_item_by_keymap(&key.try_into().ok()?)
+    }
 }
 
 impl TryFrom<KeyEvent> for KeyMap {

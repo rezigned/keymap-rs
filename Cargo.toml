@@ -57,3 +57,8 @@ required-features = ["termion"]
 name = "termion_derive"
 path = "examples/termion/derive.rs"
 required-features = ["termion", "derive"]
+
+[[example]]
+name = "termion_derived_config"
+path = "examples/termion/derived_config.rs"
+required-features = ["termion", "derive"]

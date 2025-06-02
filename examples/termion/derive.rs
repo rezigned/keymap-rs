@@ -1,14 +1,18 @@
+#[path = "../config_derive.rs"]
 mod config_derive;
+#[path = "./utils.rs"]
 mod termion_utils;
 
 use config_derive::Action;
-use keymap::KeyMap;
+use keymap::{KeyMap, KeyMapConfig};
 use std::io::{stdin, Write};
 use termion::event::Event;
 use termion::input::TermRead;
 use termion_utils::{output, print, Result};
 
 fn main() -> Result {
+    config_derive::print_config(&Action::keymap_config());
+
     let stdin = stdin();
     let mut stdout = output();
 

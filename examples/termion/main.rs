@@ -1,9 +1,11 @@
+#[path = "../config.rs"]
 mod config;
+#[path = "./utils.rs"]
 mod termion_utils;
 
 use std::io::{stdin, Write};
 
-use config::{Action, parse_config};
+use config::{parse_config, Action};
 use keymap::KeyMap;
 use termion::event::Event;
 use termion::input::TermRead;

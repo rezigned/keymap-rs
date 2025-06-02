@@ -1,4 +1,4 @@
-use keymap::{Config, DerivedConfig, Item};
+use keymap::{DerivedConfig, Item};
 use serde::Deserialize;
 
 #[cfg(feature = "derive")]
