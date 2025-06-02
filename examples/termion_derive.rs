@@ -1,12 +1,12 @@
 mod config_derive;
 mod termion_utils;
 
+use config_derive::Action;
 use keymap::KeyMap;
-use std::io::{Write, stdin};
+use std::io::{stdin, Write};
 use termion::event::Event;
 use termion::input::TermRead;
-use config_derive::Action;
-use termion_utils::{print, Result, output};
+use termion_utils::{output, print, Result};
 
 fn main() -> Result {
     let stdin = stdin();
@@ -16,7 +16,7 @@ fn main() -> Result {
         let mut send = |s: &str| print(&mut stdout, s);
 
         if let Event::Key(key) = event? {
-            match Action::try_from(KeyMap::from(key)) {
+            match Action::try_from(KeyMap::try_from(key).unwrap()) {
                 Ok(action) => match action {
                     Action::Up => send("Up!"),
                     Action::Down => send("Down!"),

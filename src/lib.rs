@@ -7,8 +7,8 @@ use keymap_parser::{parser::ParseError, Node};
 use std::fmt;
 
 // Re-exports
-pub use config::{Item, KeyMapConfig};
 pub use keymap_parser::parser;
+pub use config::{Config, DerivedConfig, Item, KeyMapConfig};
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]

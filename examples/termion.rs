@@ -18,7 +18,7 @@ fn main() -> Result {
         if let Event::Key(key) = event? {
             let mut send = |s: &str| print(&mut stdout, s);
 
-            match bindings.0.get_key_value(&KeyMap::from(key)) {
+            match bindings.0.get_key_value(&KeyMap::try_from(key).unwrap()) {
                 Some((key, action)) => {
                     if *action == Action::Quit {
                         break;

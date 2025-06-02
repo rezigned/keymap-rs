@@ -1,21 +1,25 @@
 use serde::{de, Deserialize, Deserializer};
 use termion::event::Key as KeyEvent;
 
-use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
+use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
 
-use crate::KeyMap;
+use crate::{Error, KeyMap};
 
-pub fn parse(s: &str) -> Result<KeyEvent, ParseError> {
-    parser::parse(s).map(backend_from_node)
+pub fn parse(s: &str) -> Result<KeyEvent, Error> {
+    parser::parse(s)
+        .map_err(Error::Parse)
+        .and_then(backend_from_node)
 }
 
-impl From<KeyEvent> for KeyMap {
-    fn from(value: KeyEvent) -> Self {
-        Self(node_from_backend(value))
+impl TryFrom<KeyEvent> for KeyMap {
+    type Error = Error;
+
+    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
+        node_from_backend(value).map(Self)
     }
 }
 
-fn node_from_backend(value: KeyEvent) -> Node {
+fn node_from_backend(value: KeyEvent) -> Result<Node, Error> {
     let (key, modifiers) = match value {
         KeyEvent::BackTab => (Keys::BackTab, 0),
         KeyEvent::Backspace => (Keys::Backspace, 0),
@@ -38,13 +42,13 @@ fn node_from_backend(value: KeyEvent) -> Node {
         KeyEvent::Alt(c) => (Keys::Char(c), Modifier::Alt as u8),
         KeyEvent::Ctrl(c) => (Keys::Char(c), Modifier::Ctrl as u8),
         KeyEvent::Null => (Keys::Tab, 0),
-        key => panic!("Unsupport KeyEvent {key:?}"),
+        key => return Err(Error::UnsupportedKey(format!("Unsupport KeyEvent {key:?}"))),
     };
 
-    Node { key, modifiers }
+    Ok(Node { key, modifiers })
 }
 
-fn backend_from_node(node: Node) -> KeyEvent {
+fn backend_from_node(node: Node) -> Result<KeyEvent, Error> {
     let key = match node.key {
         Keys::BackTab => KeyEvent::BackTab,
         Keys::Backspace => KeyEvent::Backspace,
@@ -64,6 +68,11 @@ fn backend_from_node(node: Node) -> KeyEvent {
         Keys::Tab => KeyEvent::Char('\t'),
         Keys::Up => KeyEvent::Up,
         Keys::Char(c) => KeyEvent::Char(c),
+        Keys::Group(group) => {
+            return Err(Error::UnsupportedKey(format!(
+                "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
+            )))
+        }
     };
 
     // Termion only allows modifier + char.
@@ -71,16 +80,16 @@ fn backend_from_node(node: Node) -> KeyEvent {
     match key {
         KeyEvent::Char(c) => {
             if node.modifiers & Modifier::Alt as u8 != 0 {
-                KeyEvent::Alt(c)
+                Ok(KeyEvent::Alt(c))
             } else if node.modifiers & Modifier::Ctrl as u8 != 0 {
-                KeyEvent::Ctrl(c)
+                Ok(KeyEvent::Ctrl(c))
             } else if node.modifiers & Modifier::Shift as u8 != 0 {
-                KeyEvent::Char(c.to_ascii_uppercase())
+                Ok(KeyEvent::Char(c.to_ascii_uppercase()))
             } else {
-                key
+                Ok(key)
             }
         }
-        _ => key,
+        _ => Ok(key),
     }
 }
 
@@ -130,7 +139,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(node_from_backend(key), node);
+            assert_eq!(node_from_backend(key).unwrap(), node);
         });
     }
 }
