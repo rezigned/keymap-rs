@@ -41,6 +41,12 @@ required-features = ["crossterm"]
 
 [[example]]
 name = "crossterm_derive"
+path = "examples/crossterm/derive.rs"
+required-features = ["crossterm", "derive"]
+
+[[example]]
+name = "crossterm_derived_config"
+path = "examples/crossterm/derived_config.rs"
 required-features = ["crossterm", "derive"]
 
 [[example]]
@@ -49,4 +55,5 @@ required-features = ["termion"]
 
 [[example]]
 name = "termion_derive"
+path = "examples/termion/derive.rs"
 required-features = ["termion", "derive"]

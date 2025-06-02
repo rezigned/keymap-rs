@@ -2,7 +2,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use keymap_parser::{self as parser, Key, Modifier, Node};
 use serde::{de, Deserialize, Deserializer};
 
-use crate::{Error, KeyMap};
+use crate::{Config, Error, Item, KeyMap};
 
 pub fn parse(s: &str) -> Result<KeyEvent, Error> {
     parser::parse(s)
@@ -23,6 +23,16 @@ impl TryFrom<KeyMap> for KeyEvent {
 
     fn try_from(value: KeyMap) -> Result<Self, Self::Error> {
         backend_from_node(&value.0)
+    }
+}
+
+impl<T> Config<T> {
+    pub fn get(&self, key: KeyEvent) -> Option<&T> {
+        self.get_by_keymap(&key.try_into().ok()?)
+    }
+
+    pub fn get_item(&self, key: KeyEvent) -> Option<(&T, &Item)> {
+        self.get_item_by_keymap(&key.try_into().ok()?)
     }
 }
 

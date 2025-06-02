@@ -1,5 +1,9 @@
 use std::io;
+
+#[path = "../config.rs"]
 mod config;
+
+#[path = "./utils.rs"]
 mod crossterm_utils;
 
 use config::{parse_config, Action};

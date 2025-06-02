@@ -1,12 +1,13 @@
+use keymap_parser::Node;
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
+use std::{collections::HashMap, ops::Deref};
 
-use crate::parse_seq;
+use crate::{parse_seq, KeyMap};
 
 const GROUP_PREFIX: &str = "@";
 
@@ -36,6 +37,14 @@ pub struct Config<T> {
 #[derive(Debug)]
 pub struct DerivedConfig<T>(Config<T>);
 
+impl<T> Deref for DerivedConfig<T> {
+    type Target = Config<T>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
 #[derive(Debug, Deserialize, PartialEq)]
 pub struct Item {
     pub keys: Vec<String>,
@@ -43,8 +52,24 @@ pub struct Item {
 }
 
 impl<T> Config<T> {
+    pub fn get_item_by_node(&self, node: &Node) -> Option<(&T, &Item)> {
+        self.get_item_by_key(&node.to_string())
+    }
+
+    pub fn get_item_by_keymap(&self, keymap: &KeyMap) -> Option<(&T, &Item)> {
+        self.get_item_by_node(&keymap.0)
+    }
+
+    pub fn get_by_node(&self, node: &Node) -> Option<&T> {
+        self.get_item_by_node(node).map(|(t, _)| t)
+    }
+
+    pub fn get_by_keymap(&self, keymap: &KeyMap) -> Option<&T> {
+        self.get_item_by_node(&keymap.0).map(|(t, _)| t)
+    }
+
     /// Returns the item and its associated [`Item`] for the given key.
-    pub fn get_by_key(&self, key: &str) -> Option<(&T, &Item)> {
+    pub fn get_item_by_key(&self, key: &str) -> Option<(&T, &Item)> {
         // Try to find an exact key match e.g. "c", etc.
         // If not found, try to find a group match e.g. "@lower", etc.
         self.keys
@@ -65,12 +90,6 @@ impl<T> Config<T> {
                     .and_then(|(_, &idx)| self.items.get(idx))
                     .map(|(t, item)| (t, item))
             })
-    }
-}
-
-impl<T: KeyMapConfig<T> + PartialEq + Eq + std::hash::Hash> DerivedConfig<T> {
-    pub fn get_by_key(&self, key: &str) -> Option<(&T, &Item)> {
-        self.0.get_by_key(key)
     }
 }
 
@@ -227,16 +246,16 @@ mod tests {
         let config: Config<String> = toml::from_str(CONFIG).unwrap();
 
         // Test reverse lookup
-        let (action, item) = config.get_by_key("c").unwrap();
+        let (action, item) = config.get_item_by_key("c").unwrap();
         assert_eq!(action, "Create");
         assert_eq!(item.description, "Create a new item");
 
-        let (action, item) = config.get_by_key("d d").unwrap();
+        let (action, item) = config.get_item_by_key("d d").unwrap();
         assert_eq!(action, "Delete");
         assert_eq!(item.keys, vec!["d", "d d", "@digit"]);
 
         // Test @digit group
-        let (action, _) = config.get_by_key("1").unwrap();
+        let (action, _) = config.get_item_by_key("1").unwrap();
         assert_eq!(action, "Delete");
     }
 
@@ -245,17 +264,17 @@ mod tests {
         let config: Config<Action> = toml::from_str(CONFIG).unwrap();
 
         // Test reverse lookup
-        let (action, _) = config.get_by_key("c").unwrap();
+        let (action, _) = config.get_item_by_key("c").unwrap();
         assert_eq!(*action, Action::Create);
 
         // There's no update key in the config.
-        assert!(config.get_by_key("u").is_none());
+        assert!(config.get_item_by_key("u").is_none());
 
-        let (action, _) = config.get_by_key("d").unwrap();
+        let (action, _) = config.get_item_by_key("d").unwrap();
         assert_eq!(*action, Action::Delete);
 
         // Test @digit group
-        let (action, _) = config.get_by_key("1").unwrap();
+        let (action, _) = config.get_item_by_key("1").unwrap();
         assert_eq!(*action, Action::Delete);
     }
 
@@ -264,14 +283,14 @@ mod tests {
         let config: DerivedConfig<Action> = toml::from_str(CONFIG).unwrap();
 
         // Test reverse lookup
-        let (action, _) = config.get_by_key("c").unwrap();
+        let (action, _) = config.get_item_by_key("c").unwrap();
         assert_eq!(*action, Action::Create);
 
         // Fallback to derived config's key i.e. "u"
-        let (action, _) = config.get_by_key("u").unwrap();
+        let (action, _) = config.get_item_by_key("u").unwrap();
         assert_eq!(*action, Action::Update);
 
-        let (action, _) = config.get_by_key("d").unwrap();
+        let (action, _) = config.get_item_by_key("d").unwrap();
         assert_eq!(*action, Action::Delete);
     }
 }
