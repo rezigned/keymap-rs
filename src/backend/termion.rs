@@ -1,7 +1,7 @@
 use serde::{de, Deserialize, Deserializer};
 use termion::event::Key as KeyEvent;
 
-use keymap_parser::{self as parser, Key as Keys, Modifier, Node};
+use keymap_parser::{self as parser, Key, Modifier, Node};
 
 use crate::{Error, KeyMap};
 
@@ -21,27 +21,27 @@ impl TryFrom<KeyEvent> for KeyMap {
 
 fn node_from_backend(value: KeyEvent) -> Result<Node, Error> {
     let (key, modifiers) = match value {
-        KeyEvent::BackTab => (Keys::BackTab, 0),
-        KeyEvent::Backspace => (Keys::Backspace, 0),
-        KeyEvent::Delete => (Keys::Delete, 0),
-        KeyEvent::Down => (Keys::Down, 0),
-        KeyEvent::End => (Keys::End, 0),
-        KeyEvent::Char('\n') => (Keys::Enter, 0),
-        KeyEvent::Esc => (Keys::Esc, 0),
-        KeyEvent::Home => (Keys::Home, 0),
-        KeyEvent::F(n) => (Keys::F(n), 0),
-        KeyEvent::Insert => (Keys::Insert, 0),
-        KeyEvent::Left => (Keys::Left, 0),
-        KeyEvent::PageDown => (Keys::PageDown, 0),
-        KeyEvent::PageUp => (Keys::PageUp, 0),
-        KeyEvent::Right => (Keys::Right, 0),
-        KeyEvent::Char(' ') => (Keys::Space, 0),
-        KeyEvent::Char('\t') => (Keys::Tab, 0),
-        KeyEvent::Up => (Keys::Up, 0),
-        KeyEvent::Char(c) => (Keys::Char(c), 0),
-        KeyEvent::Alt(c) => (Keys::Char(c), Modifier::Alt as u8),
-        KeyEvent::Ctrl(c) => (Keys::Char(c), Modifier::Ctrl as u8),
-        KeyEvent::Null => (Keys::Tab, 0),
+        KeyEvent::BackTab => (Key::BackTab, 0),
+        KeyEvent::Backspace => (Key::Backspace, 0),
+        KeyEvent::Delete => (Key::Delete, 0),
+        KeyEvent::Down => (Key::Down, 0),
+        KeyEvent::End => (Key::End, 0),
+        KeyEvent::Char('\n') => (Key::Enter, 0),
+        KeyEvent::Esc => (Key::Esc, 0),
+        KeyEvent::Home => (Key::Home, 0),
+        KeyEvent::F(n) => (Key::F(n), 0),
+        KeyEvent::Insert => (Key::Insert, 0),
+        KeyEvent::Left => (Key::Left, 0),
+        KeyEvent::PageDown => (Key::PageDown, 0),
+        KeyEvent::PageUp => (Key::PageUp, 0),
+        KeyEvent::Right => (Key::Right, 0),
+        KeyEvent::Char(' ') => (Key::Space, 0),
+        KeyEvent::Char('\t') => (Key::Tab, 0),
+        KeyEvent::Up => (Key::Up, 0),
+        KeyEvent::Char(c) => (Key::Char(c), 0),
+        KeyEvent::Alt(c) => (Key::Char(c), Modifier::Alt as u8),
+        KeyEvent::Ctrl(c) => (Key::Char(c), Modifier::Ctrl as u8),
+        KeyEvent::Null => (Key::Tab, 0),
         key => return Err(Error::UnsupportedKey(format!("Unsupport KeyEvent {key:?}"))),
     };
 
@@ -50,25 +50,25 @@ fn node_from_backend(value: KeyEvent) -> Result<Node, Error> {
 
 fn backend_from_node(node: Node) -> Result<KeyEvent, Error> {
     let key = match node.key {
-        Keys::BackTab => KeyEvent::BackTab,
-        Keys::Backspace => KeyEvent::Backspace,
-        Keys::Delete => KeyEvent::Delete,
-        Keys::Down => KeyEvent::Down,
-        Keys::End => KeyEvent::End,
-        Keys::Enter => KeyEvent::Char('\n'),
-        Keys::Esc => KeyEvent::Esc,
-        Keys::Home => KeyEvent::Home,
-        Keys::F(n) => KeyEvent::F(n),
-        Keys::Insert => KeyEvent::Insert,
-        Keys::Left => KeyEvent::Left,
-        Keys::PageDown => KeyEvent::PageDown,
-        Keys::PageUp => KeyEvent::PageUp,
-        Keys::Right => KeyEvent::Right,
-        Keys::Space => KeyEvent::Char(' '),
-        Keys::Tab => KeyEvent::Char('\t'),
-        Keys::Up => KeyEvent::Up,
-        Keys::Char(c) => KeyEvent::Char(c),
-        Keys::Group(group) => {
+        Key::BackTab => KeyEvent::BackTab,
+        Key::Backspace => KeyEvent::Backspace,
+        Key::Delete => KeyEvent::Delete,
+        Key::Down => KeyEvent::Down,
+        Key::End => KeyEvent::End,
+        Key::Enter => KeyEvent::Char('\n'),
+        Key::Esc => KeyEvent::Esc,
+        Key::Home => KeyEvent::Home,
+        Key::F(n) => KeyEvent::F(n),
+        Key::Insert => KeyEvent::Insert,
+        Key::Left => KeyEvent::Left,
+        Key::PageDown => KeyEvent::PageDown,
+        Key::PageUp => KeyEvent::PageUp,
+        Key::Right => KeyEvent::Right,
+        Key::Space => KeyEvent::Char(' '),
+        Key::Tab => KeyEvent::Char('\t'),
+        Key::Up => KeyEvent::Up,
+        Key::Char(c) => KeyEvent::Char(c),
+        Key::Group(group) => {
             return Err(Error::UnsupportedKey(format!(
                 "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
             )))

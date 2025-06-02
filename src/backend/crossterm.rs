@@ -7,11 +7,11 @@ use crate::{Error, KeyMap};
 pub fn parse(s: &str) -> Result<KeyEvent, Error> {
     parser::parse(s)
         .map_err(Error::Parse)
-        .and_then(|node| backend_from_node(&node).map_err(Error::UnsupportedKey))
+        .and_then(|node| backend_from_node(&node))
 }
 
 impl TryFrom<KeyEvent> for KeyMap {
-    type Error = String;
+    type Error = Error;
 
     fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
         node_from_backend(&value).map(Self)
@@ -19,14 +19,14 @@ impl TryFrom<KeyEvent> for KeyMap {
 }
 
 impl TryFrom<KeyMap> for KeyEvent {
-    type Error = String;
+    type Error = Error;
 
     fn try_from(value: KeyMap) -> Result<Self, Self::Error> {
         backend_from_node(&value.0)
     }
 }
 
-fn node_from_backend(value: &KeyEvent) -> Result<Node, String> {
+fn node_from_backend(value: &KeyEvent) -> Result<Node, Error> {
     let KeyEvent {
         code, modifiers, ..
     } = value;
@@ -50,7 +50,11 @@ fn node_from_backend(value: &KeyEvent) -> Result<Node, String> {
             KeyCode::Right => Key::Right,
             KeyCode::Tab => Key::Tab,
             KeyCode::Up => Key::Up,
-            code => return Err(format!("Unsupport KeyEvent {code:?}")),
+            code => {
+                return Err(Error::UnsupportedKey(format!(
+                    "Unsupport KeyEvent {code:?}"
+                )))
+            }
         };
 
         Ok(Node {
@@ -60,7 +64,7 @@ fn node_from_backend(value: &KeyEvent) -> Result<Node, String> {
     }
 }
 
-fn backend_from_node(node: &Node) -> Result<KeyEvent, String> {
+fn backend_from_node(node: &Node) -> Result<KeyEvent, Error> {
     let key = match node.key {
         Key::BackTab => KeyCode::BackTab,
         Key::Backspace => KeyCode::Backspace,
@@ -81,9 +85,9 @@ fn backend_from_node(node: &Node) -> Result<KeyEvent, String> {
         Key::Space => KeyCode::Char(' '),
         Key::Up => KeyCode::Up,
         Key::Group(group) => {
-            return Err(format!(
+            return Err(Error::UnsupportedKey(format!(
                 "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
-            ))
+            )))
         }
     };
 
