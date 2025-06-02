@@ -17,8 +17,6 @@ mod tests {
 
     use super::*;
 
-    const CONFIG: &str = include_str!("./config.toml");
-
     #[test]
     fn test_derive_key() {
         [
