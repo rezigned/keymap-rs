@@ -18,7 +18,7 @@ pub(crate) const KEY_SEP: char = '-';
 /// Represents a keyboard input node, consisting of modifier keys and a main key.
 ///
 /// For example, "Ctrl-Shift-A" would be represented as a `Node` with the `Ctrl` and `Shift` modifiers and the `Char('A')` key.
-#[derive(Debug, Eq, Hash, PartialEq)]
+#[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct Node {
     /// Bitflags representing active modifiers (see [`Modifier`]).
     pub modifiers: Modifiers,
@@ -84,7 +84,7 @@ pub(crate) const MODIFIERS: [Modifier; 4] = [
 /// Supported keyboard key types for input nodes.
 ///
 /// This enum includes character keys, function keys, and special keys.
-#[derive(Debug, Display, Eq, Hash, PartialEq, EnumString, AsRefStr)]
+#[derive(Clone, Debug, Display, Eq, Hash, PartialEq, EnumString, AsRefStr)]
 #[strum(serialize_all = "lowercase")]
 pub enum Key {
     /// Shift+Tab / Back tab.

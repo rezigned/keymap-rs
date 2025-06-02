@@ -19,7 +19,7 @@ fn main() -> io::Result<()> {
         let event = read()?;
 
         if let Event::Key(key) = event {
-            match Action::try_from(KeyMap::from(key)) {
+            match Action::try_from(KeyMap::try_from(key).unwrap()) {
                 Ok(action) => match action {
                     Action::Up => send("Up!")?,
                     Action::Down => send("Down!")?,

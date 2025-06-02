@@ -1,10 +1,12 @@
 use serde::{
-    de::{MapAccess, Visitor},
+    de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
 use std::collections::HashMap;
 use std::fmt;
 use std::marker::PhantomData;
+
+use crate::parse_seq;
 
 const GROUP_PREFIX: &str = "@";
 
@@ -50,7 +52,6 @@ impl<T> Config<T> {
             .and_then(|&idx| self.items.get(idx))
             .map(|(t, item)| (t, item))
             .or_else(|| {
-                dbg!(&self.groups);
                 self.groups
                     .iter()
                     .find(|(group, _)| match group.as_str() {
@@ -103,9 +104,9 @@ where
                 formatter.write_str("a map of items")
             }
 
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
             where
-                A: MapAccess<'de>,
+                M: MapAccess<'de>,
             {
                 let mut items = Vec::new();
                 let mut keys = HashMap::new();
@@ -116,6 +117,8 @@ where
 
                     // Build reverse lookup map using index
                     for item_key in &item.keys {
+                        let _ = parse_seq(item_key).map_err(de::Error::custom)?;
+
                         if item_key.starts_with(GROUP_PREFIX) {
                             groups.insert(item_key.clone(), item_index);
                         } else {
@@ -163,9 +166,9 @@ where
                 formatter.write_str("a map of items")
             }
 
-            fn visit_map<A>(self, mut map: A) -> Result<Self::Value, A::Error>
+            fn visit_map<M>(self, mut map: M) -> Result<Self::Value, M::Error>
             where
-                A: MapAccess<'de>,
+                M: MapAccess<'de>,
             {
                 let mut items: HashMap<T, Item> = T::keymap_config().into_iter().collect();
                 let mut keys = HashMap::new();
@@ -179,6 +182,8 @@ where
                 // Build reverse lookup map using index
                 for (i, (_, item)) in items.iter().enumerate() {
                     for item_key in &item.keys {
+                        let _ = parse_seq(item_key).map_err(de::Error::custom)?;
+
                         if item_key.starts_with(GROUP_PREFIX) {
                             groups.insert(item_key.clone(), i);
                         } else {
@@ -221,8 +226,6 @@ mod tests {
     fn test_deserialize_string_keys() {
         let config: Config<String> = toml::from_str(CONFIG).unwrap();
 
-        println!("{:#?}", config);
-
         // Test reverse lookup
         let (action, item) = config.get_by_key("c").unwrap();
         assert_eq!(action, "Create");
@@ -240,8 +243,6 @@ mod tests {
     #[test]
     fn test_deserialize_enum_keys() {
         let config: Config<Action> = toml::from_str(CONFIG).unwrap();
-
-        println!("{:#?}", config);
 
         // Test reverse lookup
         let (action, _) = config.get_by_key("c").unwrap();

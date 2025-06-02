@@ -18,6 +18,12 @@ pub use keymap_derive::KeyMap;
 pub mod backend;
 mod config;
 
+#[derive(Debug)]
+pub enum Error {
+    Parse(ParseError),
+    UnsupportedKey(String),
+}
+
 // Main KeyMap struct
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct KeyMap(Node);

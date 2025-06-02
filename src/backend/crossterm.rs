@@ -1,83 +1,93 @@
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
-use keymap_parser::{self as parser, parser::ParseError, Key as Keys, Modifier, Node};
+use keymap_parser::{self as parser, Key, Modifier, Node};
 use serde::{de, Deserialize, Deserializer};
 
-use crate::KeyMap;
+use crate::{Error, KeyMap};
 
-pub fn parse(s: &str) -> Result<KeyEvent, ParseError> {
-    parser::parse(s).map(|node: Node| backend_from_node(&node))
+pub fn parse(s: &str) -> Result<KeyEvent, Error> {
+    parser::parse(s)
+        .map_err(Error::Parse)
+        .and_then(|node| backend_from_node(&node).map_err(Error::UnsupportedKey))
 }
 
-impl From<KeyEvent> for KeyMap {
-    fn from(value: KeyEvent) -> Self {
-        Self(node_from_backend(value))
+impl TryFrom<KeyEvent> for KeyMap {
+    type Error = String;
+
+    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
+        node_from_backend(&value).map(Self)
     }
 }
 
-impl From<KeyMap> for KeyEvent {
-    fn from(value: KeyMap) -> Self {
+impl TryFrom<KeyMap> for KeyEvent {
+    type Error = String;
+
+    fn try_from(value: KeyMap) -> Result<Self, Self::Error> {
         backend_from_node(&value.0)
     }
 }
 
-fn node_from_backend(value: KeyEvent) -> Node {
+fn node_from_backend(value: &KeyEvent) -> Result<Node, String> {
     let KeyEvent {
         code, modifiers, ..
     } = value;
     {
         let key = match code {
-            KeyCode::BackTab => Keys::BackTab,
-            KeyCode::Backspace => Keys::Backspace,
-            KeyCode::Char(' ') => Keys::Space,
-            KeyCode::Char(c) => Keys::Char(c),
-            KeyCode::Delete => Keys::Delete,
-            KeyCode::Down => Keys::Down,
-            KeyCode::End => Keys::End,
-            KeyCode::Enter => Keys::Enter,
-            KeyCode::Esc => Keys::Esc,
-            KeyCode::F(n) => Keys::F(n),
-            KeyCode::Home => Keys::Home,
-            KeyCode::Insert => Keys::Insert,
-            KeyCode::Left => Keys::Left,
-            KeyCode::PageDown => Keys::PageDown,
-            KeyCode::PageUp => Keys::PageUp,
-            KeyCode::Right => Keys::Right,
-            KeyCode::Tab => Keys::Tab,
-            KeyCode::Up => Keys::Up,
-            code => panic!("Unsupport KeyEvent {code:?}"),
+            KeyCode::BackTab => Key::BackTab,
+            KeyCode::Backspace => Key::Backspace,
+            KeyCode::Char(' ') => Key::Space,
+            KeyCode::Char(c) => Key::Char(*c),
+            KeyCode::Delete => Key::Delete,
+            KeyCode::Down => Key::Down,
+            KeyCode::End => Key::End,
+            KeyCode::Enter => Key::Enter,
+            KeyCode::Esc => Key::Esc,
+            KeyCode::F(n) => Key::F(*n),
+            KeyCode::Home => Key::Home,
+            KeyCode::Insert => Key::Insert,
+            KeyCode::Left => Key::Left,
+            KeyCode::PageDown => Key::PageDown,
+            KeyCode::PageUp => Key::PageUp,
+            KeyCode::Right => Key::Right,
+            KeyCode::Tab => Key::Tab,
+            KeyCode::Up => Key::Up,
+            code => return Err(format!("Unsupport KeyEvent {code:?}")),
         };
 
-        Node {
+        Ok(Node {
             key,
             modifiers: modifiers_from_backend(modifiers),
-        }
+        })
     }
 }
 
-fn backend_from_node(node: &Node) -> KeyEvent {
+fn backend_from_node(node: &Node) -> Result<KeyEvent, String> {
     let key = match node.key {
-        Keys::BackTab => KeyCode::BackTab,
-        Keys::Backspace => KeyCode::Backspace,
-        Keys::Char(c) => KeyCode::Char(c),
-        Keys::Delete => KeyCode::Delete,
-        Keys::Down => KeyCode::Down,
-        Keys::End => KeyCode::End,
-        Keys::Enter => KeyCode::Enter,
-        Keys::Esc => KeyCode::Esc,
-        Keys::F(n) => KeyCode::F(n),
-        Keys::Home => KeyCode::Home,
-        Keys::Insert => KeyCode::Insert,
-        Keys::Left => KeyCode::Left,
-        Keys::PageDown => KeyCode::PageDown,
-        Keys::PageUp => KeyCode::PageUp,
-        Keys::Right => KeyCode::Right,
-        Keys::Tab => KeyCode::Tab,
-        Keys::Space => KeyCode::Char(' '),
-        Keys::Up => KeyCode::Up,
-        Keys::Group(group) => KeyCode::Up,
+        Key::BackTab => KeyCode::BackTab,
+        Key::Backspace => KeyCode::Backspace,
+        Key::Char(c) => KeyCode::Char(c),
+        Key::Delete => KeyCode::Delete,
+        Key::Down => KeyCode::Down,
+        Key::End => KeyCode::End,
+        Key::Enter => KeyCode::Enter,
+        Key::Esc => KeyCode::Esc,
+        Key::F(n) => KeyCode::F(n),
+        Key::Home => KeyCode::Home,
+        Key::Insert => KeyCode::Insert,
+        Key::Left => KeyCode::Left,
+        Key::PageDown => KeyCode::PageDown,
+        Key::PageUp => KeyCode::PageUp,
+        Key::Right => KeyCode::Right,
+        Key::Tab => KeyCode::Tab,
+        Key::Space => KeyCode::Char(' '),
+        Key::Up => KeyCode::Up,
+        Key::Group(group) => {
+            return Err(format!(
+                "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
+            ))
+        }
     };
 
-    KeyEvent::new(key, modifiers_from_node(node.modifiers))
+    Ok(KeyEvent::new(key, modifiers_from_node(node.modifiers)))
 }
 
 const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
@@ -87,7 +97,7 @@ const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
     (KeyModifiers::SHIFT, Modifier::Shift),
 ];
 
-fn modifiers_from_backend(value: KeyModifiers) -> parser::Modifiers {
+fn modifiers_from_backend(value: &KeyModifiers) -> parser::Modifiers {
     MODIFIERS.into_iter().fold(0, |acc, (m1, m2)| {
         acc | if value.contains(m1) { m2 as u8 } else { 0 }
     })
@@ -157,7 +167,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(node_from_backend(key), node);
+            assert_eq!(node_from_backend(&key).unwrap(), node);
         });
     }
 
@@ -175,7 +185,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(backend_from_node(&node), key);
+            assert_eq!(backend_from_node(&node).unwrap(), key);
         });
     }
 
@@ -205,8 +215,11 @@ delete = "d"
             KeyEvent::from(KeyCode::Delete),
         ]
         .map(|n| {
-            let (key, _) = result.key.get_key_value(&KeyMap::from(n)).unwrap();
-            assert_eq!(key, &KeyMap::from(n));
+            let (key, _) = result
+                .key
+                .get_key_value(&KeyMap::try_from(n).unwrap())
+                .unwrap();
+            assert_eq!(key, &KeyMap::try_from(n).unwrap());
         });
     }
 }
