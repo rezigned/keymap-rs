@@ -20,7 +20,7 @@ fn main() -> Result {
         let mut send = |s: &str| print(&mut stdout, s);
 
         if let Event::Key(key) = event? {
-            match Action::try_from(KeyMap::try_from(key).unwrap()) {
+            match Action::try_from(KeyMap::try_from(&key).unwrap()) {
                 Ok(action) => match action {
                     Action::Up => send("Up!"),
                     Action::Down => send("Down!"),

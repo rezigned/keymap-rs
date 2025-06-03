@@ -12,24 +12,40 @@ pub fn parse(s: &str) -> Result<KeyEvent, Error> {
 }
 
 impl<T> Config<T> {
-    pub fn get(&self, key: KeyEvent) -> Option<&T> {
+    /// Retrieve just the key type `T` (without the `Item`) by a `KeyEvent`.
+    ///
+    /// Returns `None` if not found.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use keymap::{Config, Item};
+    /// # use termion::event::Key as KeyEvent;
+    /// let config: Config<String> = toml::from_str(r#"
+    ///     Create = { keys = ["c"], description = "Create a new item" }
+    /// "#).unwrap();
+    ///
+    /// let key = config.get(&KeyEvent::Char('c')).unwrap();
+    /// assert_eq!(key, "Create");
+    /// ```
+    pub fn get(&self, key: &KeyEvent) -> Option<&T> {
         self.get_by_keymap(&key.try_into().ok()?)
     }
 
-    pub fn get_item(&self, key: KeyEvent) -> Option<(&T, &Item)> {
+    pub fn get_item(&self, key: &KeyEvent) -> Option<(&T, &Item)> {
         self.get_item_by_keymap(&key.try_into().ok()?)
     }
 }
 
-impl TryFrom<KeyEvent> for KeyMap {
+impl TryFrom<&KeyEvent> for KeyMap {
     type Error = Error;
 
-    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
+    fn try_from(value: &KeyEvent) -> Result<Self, Self::Error> {
         node_from_backend(value).map(Self)
     }
 }
 
-fn node_from_backend(value: KeyEvent) -> Result<Node, Error> {
+fn node_from_backend(value: &KeyEvent) -> Result<Node, Error> {
     let (key, modifiers) = match value {
         KeyEvent::BackTab => (Key::BackTab, 0),
         KeyEvent::Backspace => (Key::Backspace, 0),
@@ -39,7 +55,7 @@ fn node_from_backend(value: KeyEvent) -> Result<Node, Error> {
         KeyEvent::Char('\n') => (Key::Enter, 0),
         KeyEvent::Esc => (Key::Esc, 0),
         KeyEvent::Home => (Key::Home, 0),
-        KeyEvent::F(n) => (Key::F(n), 0),
+        KeyEvent::F(n) => (Key::F(*n), 0),
         KeyEvent::Insert => (Key::Insert, 0),
         KeyEvent::Left => (Key::Left, 0),
         KeyEvent::PageDown => (Key::PageDown, 0),
@@ -48,9 +64,9 @@ fn node_from_backend(value: KeyEvent) -> Result<Node, Error> {
         KeyEvent::Char(' ') => (Key::Space, 0),
         KeyEvent::Char('\t') => (Key::Tab, 0),
         KeyEvent::Up => (Key::Up, 0),
-        KeyEvent::Char(c) => (Key::Char(c), 0),
-        KeyEvent::Alt(c) => (Key::Char(c), Modifier::Alt as u8),
-        KeyEvent::Ctrl(c) => (Key::Char(c), Modifier::Ctrl as u8),
+        KeyEvent::Char(c) => (Key::Char(*c), 0),
+        KeyEvent::Alt(c) => (Key::Char(*c), Modifier::Alt as u8),
+        KeyEvent::Ctrl(c) => (Key::Char(*c), Modifier::Ctrl as u8),
         KeyEvent::Null => (Key::Tab, 0),
         key => return Err(Error::UnsupportedKey(format!("Unsupport KeyEvent {key:?}"))),
     };
@@ -149,7 +165,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(node_from_backend(key).unwrap(), node);
+            assert_eq!(node_from_backend(&key).unwrap(), node);
         });
     }
 }

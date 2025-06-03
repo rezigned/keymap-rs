@@ -21,7 +21,7 @@ You can add `keymap-rs` to your project in several ways:
 
 ```toml
 [dependencies]
-keymap = { version = "0.5", features = ["derive"] }
+keymap = { version = "1.0.0", features = ["derive"] }
 ```
 
 ### Using `cargo add` command
@@ -44,12 +44,15 @@ First, define an enum with the `KeyMap` derive macro:
 ```rust
 #[derive(KeyMap)]
 enum Action {
+    /// Move to the left
     #[key("left", "a")]
     Left,
 
+    /// Move to the right
     #[key("right", "d")]
     Right,
 
+    /// Quit
     #[key("q", "ctrl-c")]
     Quit,
 }

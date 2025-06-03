@@ -33,8 +33,8 @@ pub(crate) enum Action {
 #[allow(unused)]
 pub(crate) const DERIVED_CONFIG: &str = r#"
 Jump = { keys = ["j"], description = "Jump Jump!" }
-Up = { keys = ["u"], description = "Fly!" }
-Quit = { keys = ["@any"], description = "Quit!" }
+Up = { keys = ["u", "g g"], description = "Fly!" }
+Quit = { keys = ["@digit"], description = "Quit!" }
 "#;
 
 #[allow(unused)]

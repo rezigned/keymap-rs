@@ -14,15 +14,10 @@ pub(crate) struct Item<'a> {
 }
 
 pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<Item>, syn::Error> {
+    // NOTE: All variants are parsed, even those without the #[key(...)] attribute.
+    // This allows the deserializer to override keys and descriptions for variants that don't define them explicitly.
     variants
         .iter()
-        .filter(|variant| {
-            // Only keep variants with #[key(...)]
-            variant
-                .attrs
-                .iter()
-                .any(|attr| attr.path().is_ident(KEY_IDENT))
-        })
         .map(|variant| {
             Ok(Item {
                 variant,

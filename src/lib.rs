@@ -14,7 +14,6 @@ pub use config::{Config, DerivedConfig, Item, KeyMapConfig};
 #[doc(hidden)]
 pub use keymap_derive::KeyMap;
 
-// Modules
 pub mod backend;
 mod config;
 
@@ -28,7 +27,7 @@ pub enum Error {
 #[derive(Debug, Hash, PartialEq, Eq)]
 pub struct KeyMap(Node);
 
-// Implementations
+/// Converts a [`Node`] into a [`KeyMap`].
 impl From<Node> for KeyMap {
     fn from(value: Node) -> Self {
         Self(value)

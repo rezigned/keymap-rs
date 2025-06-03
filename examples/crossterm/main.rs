@@ -24,7 +24,7 @@ fn main() -> io::Result<()> {
         let event = read()?;
 
         if let Event::Key(key) = event {
-            if let Some((_, action)) = config.0.get_key_value(&KeyMap::try_from(key).unwrap()) {
+            if let Some((_, action)) = config.0.get_key_value(&KeyMap::try_from(&key).unwrap()) {
                 match action {
                     Action::Up => send("Up!")?,
                     Action::Down => send("Down!")?,

@@ -10,28 +10,53 @@ pub fn parse(s: &str) -> Result<KeyEvent, Error> {
         .and_then(|node| backend_from_node(&node))
 }
 
-impl TryFrom<KeyEvent> for KeyMap {
+impl TryFrom<&KeyEvent> for KeyMap {
     type Error = Error;
 
-    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
-        node_from_backend(&value).map(Self)
+    fn try_from(value: &KeyEvent) -> Result<Self, Self::Error> {
+        node_from_backend(value).map(Self)
     }
 }
 
-impl TryFrom<KeyMap> for KeyEvent {
+impl TryFrom<&KeyMap> for KeyEvent {
     type Error = Error;
 
-    fn try_from(value: KeyMap) -> Result<Self, Self::Error> {
+    fn try_from(value: &KeyMap) -> Result<Self, Self::Error> {
         backend_from_node(&value.0)
     }
 }
 
 impl<T> Config<T> {
-    pub fn get(&self, key: KeyEvent) -> Option<&T> {
+    /// Retrieve just the key type `T` (without the `Item`) `KeyEvent`.
+    ///
+    /// Returns `None` if not found.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use keymap::{Config, Item};
+    /// # use crossterm::event::{KeyCode, KeyEvent};
+    /// let config: Config<String> = toml::from_str(r#"
+    ///     Create = { keys = ["c"], description = "Create a new item" }
+    /// "#).unwrap();
+    ///
+    /// let key = config.get(&KeyEvent::from(KeyCode::Char('c'))).unwrap();
+    /// assert_eq!(key, "Create");
+    /// ```
+    pub fn get(&self, key: &KeyEvent) -> Option<&T> {
         self.get_by_keymap(&key.try_into().ok()?)
     }
 
-    pub fn get_item(&self, key: KeyEvent) -> Option<(&T, &Item)> {
+    pub fn get_seq(&self, keys: &[KeyEvent]) -> Option<&T> {
+        let nodes = keys
+            .iter()
+            .map(|key| node_from_backend(key).ok())
+            .collect::<Option<Vec<_>>>()?;
+
+        self.get_item_by_keys(&nodes).map(|(t, _)| t)
+    }
+
+    pub fn get_item(&self, key: &KeyEvent) -> Option<(&T, &Item)> {
         self.get_item_by_keymap(&key.try_into().ok()?)
     }
 }
@@ -231,9 +256,9 @@ delete = "d"
         .map(|n| {
             let (key, _) = result
                 .key
-                .get_key_value(&KeyMap::try_from(n).unwrap())
+                .get_key_value(&KeyMap::try_from(&n).unwrap())
                 .unwrap();
-            assert_eq!(key, &KeyMap::try_from(n).unwrap());
+            assert_eq!(key, &KeyMap::try_from(&n).unwrap());
         });
     }
 }

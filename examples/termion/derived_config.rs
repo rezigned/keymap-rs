@@ -20,7 +20,7 @@ fn main() -> Result {
         let mut send = |s: &str| print(&mut stdout, s);
 
         if let Event::Key(key) = event? {
-            match config.get(key) {
+            match config.get(&key) {
                 Some(action) => match action {
                     Action::Up => send("Up!"),
                     Action::Down => send("Down!"),

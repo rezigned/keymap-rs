@@ -24,7 +24,7 @@ fn main() -> io::Result<()> {
         let event = read()?;
 
         if let Event::Key(key) = event {
-            match Action::try_from(KeyMap::try_from(key).unwrap()) {
+            match Action::try_from(KeyMap::try_from(&key).unwrap()) {
                 Ok(action) => match action {
                     Action::Quit => break,
                     Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => {

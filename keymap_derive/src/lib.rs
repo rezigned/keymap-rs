@@ -14,14 +14,15 @@ mod item;
 ///
 /// # Example
 ///
-/// ```ignore
-/// use keymap::parse;
-/// use keymap_derive::KeyMap;
+/// ```
+/// use keymap::KeyMapConfig;
 ///
-/// #[derive(PartialEq, KeyMap)]
+/// #[derive(Debug, PartialEq, keymap::KeyMap)]
 /// enum Action {
+///     /// Create a new item
 ///     #[key("c")]
 ///     Create,
+///     /// Delete an item
 ///     #[key("x", "d")]
 ///     Delete,
 /// }
@@ -30,6 +31,7 @@ mod item;
 /// let action = Action::try_from(keymap).unwrap();
 ///
 /// assert_eq!(action, Action::Create);
+/// assert_eq!(action.keymap_item().description, "Create a new item");
 /// ```
 ///
 /// # Attributes
@@ -68,19 +70,31 @@ pub fn keymap(input: TokenStream) -> TokenStream {
 
 fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
     let mut entries = Vec::new();
+    let mut match_arms = Vec::new();
 
     for item in items {
         let ident = &item.variant.ident;
-        let keys = &item.keys;
+        let keys = &item
+            .keys
+            .iter()
+            .map(|key| quote! { #key.to_string() })
+            .collect::<Vec<_>>();
         let doc = &item.description;
 
         entries.push(quote! {
             (
                 #name::#ident,
                 ::keymap::Item::new(
-                    vec![#(#keys),*].iter().map(ToString::to_string).collect::<Vec<String>>(),
+                    vec![#(#keys),*],
                     #doc.to_string()
                 )
+            ),
+        });
+
+        match_arms.push(quote! {
+            #name::#ident => ::keymap::Item::new(
+                vec![#(#keys),*],
+                #doc.to_string()
             ),
         });
     }
@@ -89,6 +103,12 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
         impl ::keymap::KeyMapConfig<#name> for #name {
             fn keymap_config() -> Vec<(#name, ::keymap::Item)> {
                 vec![#(#entries)*]
+            }
+
+            fn keymap_item(&self) -> ::keymap::Item {
+                match self {
+                    #(#match_arms)*
+                }
             }
         }
     }
@@ -129,14 +149,17 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
             .keys
             .iter()
             .map(|key| key.split_whitespace())
-            .map(|seq| quote! { [#(#seq),*] });
+            .map(|seq| quote! { [#(#seq),*] })
+            .collect::<Vec<_>>();
 
         // Build match arms e.g.
         //
         // ["x"] | ["d", "d"] => Action::Delete
-        match_arms.push(quote! {
-            #(#keys)|* => ::std::result::Result::Ok(#name::#ident),
-        });
+        if !keys.is_empty() {
+            match_arms.push(quote! {
+                #(#keys)|* => ::std::result::Result::Ok(#name::#ident),
+            });
+        }
 
         // Build char group expression e.g.
         //

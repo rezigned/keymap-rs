@@ -7,36 +7,65 @@ use std::{fmt, marker::PhantomData, ops::Deref};
 
 use crate::KeyMap;
 
-/// A trait for providing a default key-to-item mapping.
+/// A trait for providing a default mapping between keys and items.
 ///
-/// Implementors should return a `Vec<(T, Item)>` containing the default
-/// associations. These defaults will be used when deserializing a
-/// [`DerivedConfig<T>`], and can be overridden by user-supplied entries.
+/// Implementors define the default associations between values of `T`
+/// and their corresponding [`Item`]s. These defaults are used when
+/// deserializing a [`DerivedConfig<T>`] or constructing a [`keymap::Config<T>`].
+/// Users can override these defaults with their own entries.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```ignore
 /// #[derive(Debug, PartialEq, Eq, Hash)]
 /// enum Action {
 ///     Create,
 ///     Update,
-///     Delete,
 /// }
 ///
+/// // This is auto-implemented by `keymap_derive::KeyMap` proc macro.
 /// impl KeyMapConfig<Action> for Action {
+///     /// Returns the default key-to-item mappings.
 ///     fn keymap_config() -> Vec<(Action, Item)> {
 ///         vec![
 ///             (Action::Create, Item::new(vec!["c".into()], "Create an item".into())),
 ///             (Action::Update, Item::new(vec!["u".into()], "Update an item".into())),
-///             (Action::Delete, Item::new(vec!["d".into()], "Delete an item".into())),
 ///         ]
+///     }
+///
+///     /// Returns the [`Item`] associated with this variant.
+///     fn keymap_item(&self) -> Item {
+///         match self {
+///             Action::Create => Item::new(vec!["c".into()], "Create an item".into()),
+///             Action::Update => Item::new(vec!["u".into()], "Update an item".into()),
+///         }
 ///     }
 /// }
 /// ```
 pub trait KeyMapConfig<T> {
-    /// Returns a vector of `(T, Item)` pairs representing the default
-    /// associations between keys and items.
+    /// Returns the default key-to-item mappings.
+    ///
+    /// This method should return a vector of `(T, Item)` pairs representing
+    /// the default associations between keys and their corresponding items.
+    /// These defaults will be incorporated into a [`keymap::Config<T>`]
+    /// and can be overridden by user-supplied configuration when deserializing.
     fn keymap_config() -> Vec<(T, Item)>;
+
+    /// Returns the [`Item`] associated with this particular variant.
+    ///
+    /// This method allows looking up the default item corresponding to
+    /// a specific value of `T`. It should produce the same data as
+    /// found in the vector returned by [`keymap_config`].
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let item = Action::Create.keymap_item();
+    ///
+    /// assert_eq!(item.keys, vec!["c"]);
+    /// assert_eq!(item.description, "Create an item");
+    /// ```
+    fn keymap_item(&self) -> Item;
 }
 
 /// A deserializable configuration structure that maps keys to items.
@@ -119,6 +148,14 @@ pub struct Config<T> {
 ///             (Action::Update, Item::new(vec!["u".into()], "Update".into())),
 ///             (Action::Delete, Item::new(vec!["d".into()], "Delete".into())),
 ///         ]
+///     }
+///
+///     fn keymap_item(&self) -> Item {
+///         match self {
+///             Action::Create => Item::new(vec!["c".into()], "Create".into()),
+///             Action::Update => Item::new(vec!["u".into()], "Update".into()),
+///             Action::Delete => Item::new(vec!["d".into()], "Delete".into()),
+///         }
 ///     }
 /// }
 ///
@@ -242,19 +279,13 @@ impl<T> Config<T> {
         self.get_item_by_keys(parse_seq(key).ok()?.as_slice())
     }
 
-    /// Lookup an `(T, Item)` pair by a single parsed [`Node`]. If the first
-    /// element of any stored `Vec<Node>` matches `key`, return the associated
-    /// `(T, Item)`.
+    /// Lookup an `(T, Item)` pair by a single parsed [`Node`]. Return the associated
+    /// `(T, Item)` if the element of `Vec<Node>` matches `key`.
     ///
     /// This method does not clone the stored keys; it only compares the first
     /// element of each stored `Vec<Node>` to the provided `Node`.
     pub fn get_item_by_key(&self, key: &Node) -> Option<(&T, &Item)> {
-        self.keys
-            .iter()
-            // Compare only the first node in each stored sequence
-            .find(|(nodes, _)| nodes.first() == Some(key))
-            .and_then(|(_, i)| self.items.get(*i))
-            .map(|(t, item)| (t, item))
+        self.get_item_by_keys(std::slice::from_ref(key))
     }
 
     /// Lookup an `(T, Item)` pair by an entire slice of parsed [`Node`]s.
