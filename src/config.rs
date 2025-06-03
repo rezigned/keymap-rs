@@ -1,9 +1,9 @@
-use keymap_parser::{node::CharGroup, parse_seq, Key, Node};
+use keymap_parser::{parse_seq, Node};
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::{collections::HashMap, fmt, marker::PhantomData, ops::Deref};
+use std::{fmt, marker::PhantomData, ops::Deref};
 
 use crate::KeyMap;
 
@@ -22,11 +22,8 @@ pub struct Config<T> {
     /// A list of `(T, Item)` pairs.
     pub items: Vec<(T, Item)>,
 
-    /// A map of keys to their index in the `items` list.
-    keys: HashMap<String, usize>,
-
     /// An ordered list of group names.
-    groups: Vec<(CharGroup, usize)>,
+    keys: Vec<(Vec<Node>, usize)>,
 }
 
 /// A variant of [`Config`] that merges user-defined and default entries.
@@ -54,7 +51,7 @@ pub struct Item {
 
 impl<T> Config<T> {
     pub fn get_item_by_node(&self, node: &Node) -> Option<(&T, &Item)> {
-        self.get_item_by_key(&node.to_string())
+        self.get_item_by_key(node)
     }
 
     pub fn get_item_by_keymap(&self, keymap: &KeyMap) -> Option<(&T, &Item)> {
@@ -69,28 +66,26 @@ impl<T> Config<T> {
         self.get_item_by_node(&keymap.0).map(|(t, _)| t)
     }
 
-    pub fn get_item_by_keys(&self, keys: &[&str]) -> Option<(&T, &Item)> {
-        // Try to find an exact key match e.g. "c", etc.
-        // If not found, try to find a group match e.g. "@lower", etc.
-        keys.iter().find_map(|key| self.get_item_by_key(key))
+    pub fn get_item_by_key_str(&self, key: &str) -> Option<(&T, &Item)> {
+        self.get_item_by_keys(parse_seq(key).ok()?.as_slice())
     }
 
     /// Returns the item and its associated [`Item`] for the given key.
-    pub fn get_item_by_key(&self, key: &str) -> Option<(&T, &Item)> {
-        // Try to find an exact key match e.g. "c", etc.
-        // If not found, try to find a group match e.g. "@lower", etc.
+    pub fn get_item_by_key(&self, key: &Node) -> Option<(&T, &Item)> {
         self.keys
-            .get(key)
-            .and_then(|&idx| self.items.get(idx))
+            .iter()
+            // Avoiding node.clone() here
+            .find(|(nodes, _)| nodes.first() == Some(key))
+            .and_then(|(_, i)| self.items.get(*i))
             .map(|(t, item)| (t, item))
-            .or_else(|| {
-                // Group's order is important, thus, the BTreeMap is used.
-                self.groups
-                    .iter()
-                    .find(|(group, _)| key.chars().all(|c| group.matches(c)))
-                    .and_then(|(_, idx)| self.items.get(*idx))
-                    .map(|(t, item)| (t, item))
-            })
+    }
+
+    pub fn get_item_by_keys(&self, keys: &[Node]) -> Option<(&T, &Item)> {
+        self.keys
+            .iter()
+            .find(|(nodes, _)| nodes == keys)
+            .and_then(|(_, i)| self.items.get(*i))
+            .map(|(t, item)| (t, item))
     }
 }
 
@@ -129,33 +124,25 @@ where
                 M: MapAccess<'de>,
             {
                 let mut items = Vec::new();
-                let mut keys = HashMap::new();
-                let mut groups = vec![];
+                let mut keys = vec![];
 
-                while let Some((key, item)) = map.next_entry::<T, Item>()? {
+                while let Some((t, item)) = map.next_entry::<T, Item>()? {
                     let i = items.len();
 
-                    // Build reverse lookup map using index
+                    // Build reverse lookup using index
                     for item_key in &item.keys {
-                        let nodes = parse_seq(item_key).map_err(de::Error::custom)?;
-                        nodes.iter().for_each(|node| match node.key {
-                            Key::Group(group) => {
-                                groups.push((group, i));
-                            }
-                            _ => {
-                                keys.insert(node.to_string(), i);
-                            }
-                        });
+                        let k = parse_seq(item_key)
+                            .map_err(de::Error::custom)?
+                            .into_iter()
+                            .collect::<Vec<_>>();
+
+                        keys.push((k, i));
                     }
 
-                    items.push((key, item));
+                    items.push((t, item));
                 }
 
-                Ok(Config {
-                    items,
-                    keys,
-                    groups,
-                })
+                Ok(Config { items, keys })
             }
         }
 
@@ -192,35 +179,32 @@ where
             where
                 M: MapAccess<'de>,
             {
-                let mut items: HashMap<T, Item> = T::keymap_config().into_iter().collect();
-                let mut keys = HashMap::new();
-                let mut groups = vec![];
+                // Base items
+                let mut items = T::keymap_config();
+                let mut keys = vec![];
 
-                // Merge derived items with config items
-                while let Some((key, item)) = map.next_entry::<T, Item>()? {
-                    items.insert(key, item);
+                // Merge deserialized items with items from config
+                while let Some((t, item)) = map.next_entry::<T, Item>()? {
+                    if let Some(i) = items.iter().position(|(k, _)| k == &t) {
+                        items[i].1 = item;
+                    } else {
+                        items.push((t, item));
+                    }
                 }
 
                 // Build reverse lookup map using index
                 for (i, (_, item)) in items.iter().enumerate() {
                     for item_key in &item.keys {
-                        let nodes = parse_seq(item_key).map_err(de::Error::custom)?;
-                        nodes.iter().for_each(|node| match node.key {
-                            Key::Group(group) => {
-                                groups.push((group, i));
-                            }
-                            _ => {
-                                keys.insert(node.to_string(), i);
-                            }
-                        });
+                        let k = parse_seq(item_key)
+                            .map_err(de::Error::custom)?
+                            .into_iter()
+                            .collect::<Vec<_>>();
+
+                        keys.push((k, i));
                     }
                 }
 
-                Ok(DerivedConfig(Config {
-                    items: items.into_iter().collect(),
-                    keys,
-                    groups,
-                }))
+                Ok(DerivedConfig(Config { items, keys }))
             }
         }
 
@@ -234,7 +218,7 @@ mod tests {
 
     const CONFIG: &str = r#"
         Create = { keys = ["c"], description = "Create a new item" }
-        Delete = { keys = ["d", "d d", "@digit"], description = "Delete an item" }
+        Delete = { keys = ["d", "d e", "@digit"], description = "Delete an item" }
     "#;
 
     #[derive(Debug, keymap_derive::KeyMap, Deserialize, PartialEq, Eq, Hash)]
@@ -251,16 +235,16 @@ mod tests {
         let config: Config<String> = toml::from_str(CONFIG).unwrap();
 
         // Test reverse lookup
-        let (action, item) = config.get_item_by_key("c").unwrap();
+        let (action, item) = config.get_item_by_key_str("c").unwrap();
         assert_eq!(action, "Create");
         assert_eq!(item.description, "Create a new item");
 
-        let (action, item) = config.get_item_by_keys(&["d", "d"]).unwrap();
+        let (action, item) = config.get_item_by_keys(&parse_seq("d e").unwrap()).unwrap();
         assert_eq!(action, "Delete");
         assert_eq!(item.description, "Delete an item");
 
         // Test @digit group
-        let (action, _) = config.get_item_by_key("1").unwrap();
+        let (action, _) = config.get_item_by_key_str("1").unwrap();
         assert_eq!(action, "Delete");
     }
 
@@ -269,17 +253,17 @@ mod tests {
         let config: Config<Action> = toml::from_str(CONFIG).unwrap();
 
         // Test reverse lookup
-        let (action, _) = config.get_item_by_key("c").unwrap();
+        let (action, _) = config.get_item_by_key_str("c").unwrap();
         assert_eq!(*action, Action::Create);
 
         // There's no update key in the config.
-        assert!(config.get_item_by_key("u").is_none());
+        assert!(config.get_item_by_key_str("u").is_none());
 
-        let (action, _) = config.get_item_by_key("d").unwrap();
+        let (action, _) = config.get_item_by_key_str("d").unwrap();
         assert_eq!(*action, Action::Delete);
 
         // Test @digit group
-        let (action, _) = config.get_item_by_key("1").unwrap();
+        let (action, _) = config.get_item_by_key_str("1").unwrap();
         assert_eq!(*action, Action::Delete);
     }
 
@@ -288,14 +272,14 @@ mod tests {
         let config: DerivedConfig<Action> = toml::from_str(CONFIG).unwrap();
 
         // Test reverse lookup
-        let (action, _) = config.get_item_by_key("c").unwrap();
+        let (action, _) = config.get_item_by_key_str("c").unwrap();
         assert_eq!(*action, Action::Create);
 
         // Fallback to derived config's key i.e. "u"
-        let (action, _) = config.get_item_by_key("u").unwrap();
+        let (action, _) = config.get_item_by_key_str("u").unwrap();
         assert_eq!(*action, Action::Update);
 
-        let (action, _) = config.get_item_by_key("d").unwrap();
+        let (action, _) = config.get_item_by_key_str("d").unwrap();
         assert_eq!(*action, Action::Delete);
     }
 }

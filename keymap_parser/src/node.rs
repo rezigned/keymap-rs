@@ -186,6 +186,7 @@ impl PartialEq for Key {
 
             // Match char group against char
             (Key::Group(a), Key::Char(b)) => a.matches(*b),
+            (Key::Group(CharGroup::Any), _) => true,
             _ => false,
         }
     }
@@ -197,7 +198,7 @@ impl Hash for Key {
             Key::Char(ch) => ch.hash(state),
             Key::F(n) => n.hash(state),
             Key::Group(group) => group.hash(state),
-            _ => (),
+            key => key.to_string().hash(state),
         }
     }
 }
@@ -274,11 +275,9 @@ mod tests {
             ("f1", "f12", false),
             ("ctrl-a", "ctrl-a", true),
             ("ctrl-a", "ctrl-b", false),
-
             // Swap order
             ("ctrl-alt-a", "alt-ctrl-a", true),
             ("ctrl-alt-shift-a", "alt-shift-ctrl-a", true),
-
             // Char groups
             ("@digit", "1", true),
             ("@alnum", "1", true),
