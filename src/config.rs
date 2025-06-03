@@ -1,15 +1,11 @@
-use keymap_parser::Node;
+use keymap_parser::{node::CharGroup, parse_seq, Key, Node};
 use serde::{
     de::{self, MapAccess, Visitor},
     Deserialize, Deserializer,
 };
-use std::{collections::BTreeMap, fmt};
-use std::marker::PhantomData;
-use std::{collections::HashMap, ops::Deref};
+use std::{collections::HashMap, fmt, marker::PhantomData, ops::Deref};
 
-use crate::{parse_seq, KeyMap};
-
-const GROUP_PREFIX: &str = "@";
+use crate::KeyMap;
 
 pub trait KeyMapConfig<T> {
     fn keymap_config() -> Vec<(T, Item)>;
@@ -29,8 +25,8 @@ pub struct Config<T> {
     /// A map of keys to their index in the `items` list.
     keys: HashMap<String, usize>,
 
-    /// An ordered map of group names.
-    groups: BTreeMap<String, usize>,
+    /// An ordered list of group names.
+    groups: Vec<(CharGroup, usize)>,
 }
 
 /// A variant of [`Config`] that merges user-defined and default entries.
@@ -73,6 +69,12 @@ impl<T> Config<T> {
         self.get_item_by_node(&keymap.0).map(|(t, _)| t)
     }
 
+    pub fn get_item_by_keys(&self, keys: &[&str]) -> Option<(&T, &Item)> {
+        // Try to find an exact key match e.g. "c", etc.
+        // If not found, try to find a group match e.g. "@lower", etc.
+        keys.iter().find_map(|key| self.get_item_by_key(key))
+    }
+
     /// Returns the item and its associated [`Item`] for the given key.
     pub fn get_item_by_key(&self, key: &str) -> Option<(&T, &Item)> {
         // Try to find an exact key match e.g. "c", etc.
@@ -85,16 +87,8 @@ impl<T> Config<T> {
                 // Group's order is important, thus, the BTreeMap is used.
                 self.groups
                     .iter()
-                    .find(|(group, _)| match group.as_str() {
-                        "@lower" => key.chars().all(|c| c.is_lowercase()),
-                        "@upper" => key.chars().all(|c| c.is_uppercase()),
-                        "@digit" => key.chars().all(|c| c.is_ascii_digit()),
-                        "@alpha" => key.chars().all(|c| c.is_alphabetic()),
-                        "@alnum" => key.chars().all(|c| c.is_alphanumeric()),
-                        "@any" => true,
-                        _ => false,
-                    })
-                    .and_then(|(_, &idx)| self.items.get(idx))
+                    .find(|(group, _)| key.chars().all(|c| group.matches(c)))
+                    .and_then(|(_, idx)| self.items.get(*idx))
                     .map(|(t, item)| (t, item))
             })
     }
@@ -136,20 +130,22 @@ where
             {
                 let mut items = Vec::new();
                 let mut keys = HashMap::new();
-                let mut groups = BTreeMap::new();
+                let mut groups = vec![];
 
                 while let Some((key, item)) = map.next_entry::<T, Item>()? {
-                    let item_index = items.len();
+                    let i = items.len();
 
                     // Build reverse lookup map using index
                     for item_key in &item.keys {
-                        let _ = parse_seq(item_key).map_err(de::Error::custom)?;
-
-                        if item_key.starts_with(GROUP_PREFIX) {
-                            groups.insert(item_key.clone(), item_index);
-                        } else {
-                            keys.insert(item_key.clone(), item_index);
-                        }
+                        let nodes = parse_seq(item_key).map_err(de::Error::custom)?;
+                        nodes.iter().for_each(|node| match node.key {
+                            Key::Group(group) => {
+                                groups.push((group, i));
+                            }
+                            _ => {
+                                keys.insert(node.to_string(), i);
+                            }
+                        });
                     }
 
                     items.push((key, item));
@@ -198,7 +194,7 @@ where
             {
                 let mut items: HashMap<T, Item> = T::keymap_config().into_iter().collect();
                 let mut keys = HashMap::new();
-                let mut groups = BTreeMap::new();
+                let mut groups = vec![];
 
                 // Merge derived items with config items
                 while let Some((key, item)) = map.next_entry::<T, Item>()? {
@@ -208,13 +204,15 @@ where
                 // Build reverse lookup map using index
                 for (i, (_, item)) in items.iter().enumerate() {
                     for item_key in &item.keys {
-                        let _ = parse_seq(item_key).map_err(de::Error::custom)?;
-
-                        if item_key.starts_with(GROUP_PREFIX) {
-                            groups.insert(item_key.clone(), i);
-                        } else {
-                            keys.insert(item_key.clone(), i);
-                        }
+                        let nodes = parse_seq(item_key).map_err(de::Error::custom)?;
+                        nodes.iter().for_each(|node| match node.key {
+                            Key::Group(group) => {
+                                groups.push((group, i));
+                            }
+                            _ => {
+                                keys.insert(node.to_string(), i);
+                            }
+                        });
                     }
                 }
 
@@ -257,9 +255,9 @@ mod tests {
         assert_eq!(action, "Create");
         assert_eq!(item.description, "Create a new item");
 
-        let (action, item) = config.get_item_by_key("d d").unwrap();
+        let (action, item) = config.get_item_by_keys(&["d", "d"]).unwrap();
         assert_eq!(action, "Delete");
-        assert_eq!(item.keys, vec!["d", "d d", "@digit"]);
+        assert_eq!(item.description, "Delete an item");
 
         // Test @digit group
         let (action, _) = config.get_item_by_key("1").unwrap();

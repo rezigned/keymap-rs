@@ -138,12 +138,12 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
             #(#keys)|* => ::std::result::Result::Ok(#name::#ident),
         });
 
-        // Build char group match arms e.g.
+        // Build char group expression e.g.
         //
         // #[key("@digit")]
         // Delete,
         //
-        // ['0..9'] => Action::Delete
+        // CharGroup::Digit.matches(c)
         let groups = item
             .nodes
             .iter()
@@ -167,7 +167,7 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
                 if char_groups.is_empty() {
                     None
                 } else {
-                    Some(quote! { #(#char_groups),* })
+                    Some(quote! { #(#char_groups)&&* })
                 }
             })
             .collect::<Vec<_>>();
@@ -203,8 +203,11 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
 
                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
                     #(#match_arms)*
+
+                    // Match char group e.g. CharGroup::Digit, CharGroup::Alpha, etc.
+                    //
+                    // NOTE: It currenlty only supports single char groups.
                     [char] => {
-                        // Match char group e.g. CharGroup::Digit, CharGroup::Alpha, etc.
                         let c = char.chars().next().unwrap();
                         #(#char_group_branches)* { ::std::result::Result::Err(format!("Unknown key [{char}]")) }
                     }
