@@ -47,7 +47,7 @@ impl From<Key> for Node {
 /// Modifier keys that can be combined with other keys.
 ///
 /// Each variant is represented as a bitflag.
-#[derive(Copy, Clone, Debug, Display, Eq, Hash, PartialEq, EnumString, AsRefStr)]
+#[derive(Copy, Clone, Debug, Display, Hash, PartialEq, EnumString, AsRefStr)]
 #[strum(serialize_all = "lowercase")]
 pub enum Modifier {
     /// No modifier.
@@ -92,8 +92,6 @@ pub enum Key {
     BackTab,
     /// Backspace key.
     Backspace,
-    /// A Unicode character key.
-    Char(char),
     /// Delete key (also accepts "del" as a string).
     #[strum(serialize = "del", serialize = "delete")]
     Delete,
@@ -107,8 +105,6 @@ pub enum Key {
     Esc,
     /// Home key.
     Home,
-    /// Function key (e.g., F1-F12).
-    F(u8),
     /// Insert key.
     Insert,
     /// Left arrow key.
@@ -125,13 +121,17 @@ pub enum Key {
     Tab,
     /// Up arrow key.
     Up,
+    /// Function key (e.g., F1-F12).
+    F(u8),
+    /// A Unicode character key.
+    Char(char),
     /// Group
     #[strum(disabled)]
     Group(CharGroup),
 }
 
 /// Character group types for pattern matching
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, EnumString)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, EnumString)]
 #[strum(serialize_all = "lowercase")]
 pub enum CharGroup {
     /// Matches ASCII digits (0-9)
@@ -195,10 +195,22 @@ impl PartialEq for Key {
 impl Hash for Key {
     fn hash<H: Hasher>(&self, state: &mut H) {
         match self {
-            Key::Char(ch) => ch.hash(state),
-            Key::F(n) => n.hash(state),
-            Key::Group(group) => group.hash(state),
-            key => key.to_string().hash(state),
+            Key::Char(ch) => {
+                state.write_u8(1);
+                ch.hash(state)
+            }
+            Key::F(n) => {
+                state.write_u8(2);
+                n.hash(state)
+            }
+            Key::Group(group) => {
+                state.write_u8(3);
+                group.hash(state)
+            }
+            key => {
+                state.write_u8(4);
+                key.to_string().hash(state)
+            }
         }
     }
 }

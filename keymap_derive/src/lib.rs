@@ -222,6 +222,8 @@ fn impl_try_from(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStream {
 
             /// Convert a [`Vec<KeyMap>`] into an enum.
             fn try_from(value: Vec<::keymap::KeyMap>) -> ::std::result::Result<Self, Self::Error> {
+
+                // TODO: Check nodes directly (no conversion to string).
                 let keys = value.iter().map(ToString::to_string).collect::<Vec<_>>();
 
                 match keys.iter().map(|v| v.as_str()).collect::<Vec<_>>().as_slice() {
