@@ -1,0 +1,12 @@
+[package]
+name = "keymap_parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.219", features = ["derive"] }
+strum = "0.27.1"
+strum_macros = "0.27.1"
+
+[dev-dependencies]
+toml = "0.8.22"

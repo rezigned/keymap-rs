@@ -12,16 +12,24 @@ license = "MIT"
 [lib]
 doctest = false
 
+[workspace]
+members = [
+    "keymap_derive",
+    "keymap_parser",
+]
+
 [dependencies]
+keymap_parser = { path = "./keymap_parser" }
+keymap_derive = { path = "./keymap_derive", optional = true }
 crossterm = { version = "0.29", optional = true }
 termion = { version = "4.0", optional = true }
-pom = "3.4.0"
 serde = { version = "1.0", features = ["derive"] }
 strum = "0.27"
 strum_macros = "0.27"
 
 [features]
-default = ["crossterm"]
+default = ["crossterm", "derive"]
+derive = ["dep:keymap_derive"]
 
 [dev-dependencies]
 toml = "0.8"
@@ -31,5 +39,25 @@ name = "crossterm"
 required-features = ["crossterm"]
 
 [[example]]
+name = "crossterm_derive"
+path = "examples/crossterm/derive.rs"
+required-features = ["crossterm", "derive"]
+
+[[example]]
+name = "crossterm_derived_config"
+path = "examples/crossterm/derived_config.rs"
+required-features = ["crossterm", "derive"]
+
+[[example]]
 name = "termion"
 required-features = ["termion"]
+
+[[example]]
+name = "termion_derive"
+path = "examples/termion/derive.rs"
+required-features = ["termion", "derive"]
+
+[[example]]
+name = "termion_derived_config"
+path = "examples/termion/derived_config.rs"
+required-features = ["termion", "derive"]
