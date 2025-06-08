@@ -3,12 +3,12 @@ use syn::{punctuated::Punctuated, token::Comma, Attribute, LitStr, Token, Varian
 
 /// An attribute path name #[key(...)]
 const KEY_IDENT: &str = "key";
-
 const DOC_IDENT: &str = "doc";
 
 pub(crate) struct Item<'a> {
     pub variant: &'a Variant,
     pub keys: Vec<String>,
+    pub ignore: bool,
 
     #[allow(dead_code)]
     pub nodes: Vec<Vec<Node>>,
@@ -21,14 +21,34 @@ pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<I
     variants
         .iter()
         .map(|variant| {
+            let ignore = parse_ignore(variant);
+
             Ok(Item {
                 variant,
+                ignore,
                 description: parse_doc(variant),
-                keys: parse_keys(variant)?,
-                nodes: parse_nodes(variant)?,
+                keys: parse_keys(variant, ignore)?,
+                nodes: parse_nodes(variant, ignore)?,
             })
         })
         .collect()
+}
+
+fn parse_ignore(variant: &Variant) -> bool {
+    variant
+        .attrs
+        .iter()
+        .any(|attr| {
+            let mut ignore = false;
+            if attr.path().is_ident(KEY_IDENT) {
+                let _ = attr.parse_nested_meta(|meta| {
+                    ignore = meta.path.is_ident("ignore");
+                    Ok(())
+                });
+            };
+
+            ignore
+        })
 }
 
 fn parse_doc(variant: &Variant) -> String {
@@ -61,11 +81,11 @@ fn parse_args(attr: &Attribute) -> syn::Result<Punctuated<LitStr, Token![,]>> {
     attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty)
 }
 
-fn parse_keys(variant: &Variant) -> syn::Result<Vec<String>> {
+fn parse_keys(variant: &Variant, ignore: bool) -> syn::Result<Vec<String>> {
     let mut keys = Vec::new();
 
     for attr in &variant.attrs {
-        if !attr.path().is_ident(KEY_IDENT) {
+        if !attr.path().is_ident(KEY_IDENT) || ignore {
             continue;
         }
 
@@ -84,11 +104,11 @@ fn parse_keys(variant: &Variant) -> syn::Result<Vec<String>> {
     Ok(keys)
 }
 
-fn parse_nodes(variant: &Variant) -> syn::Result<Vec<Vec<Node>>> {
+fn parse_nodes(variant: &Variant, ignore: bool) -> syn::Result<Vec<Vec<Node>>> {
     let mut nodes = Vec::new();
 
     for attr in &variant.attrs {
-        if !attr.path().is_ident(KEY_IDENT) {
+        if !attr.path().is_ident(KEY_IDENT) || ignore {
             continue;
         }
 

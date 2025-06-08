@@ -12,6 +12,9 @@ enum Action {
     /// Quit
     #[key("@any")]
     Quit,
+
+    #[key(ignore)]
+    Hello(char)
 }
 
 #[cfg(test)]

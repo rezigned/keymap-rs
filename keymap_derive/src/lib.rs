@@ -5,7 +5,7 @@
 use item::{parse_items, Item};
 use proc_macro::TokenStream;
 use quote::quote;
-use syn::{DataEnum, DeriveInput, Ident};
+use syn::{DataEnum, DeriveInput, Fields, Ident};
 
 mod item;
 
@@ -79,22 +79,32 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             .collect::<Vec<_>>();
         let doc = &item.description;
 
-        entries.push(quote! {
-            (
-                #name::#ident,
-                ::keymap::Item::new(
-                    vec![#(#keys),*],
-                    #doc.to_string()
-                )
-            ),
-        });
+        let variant = match &item.variant.fields {
+            Fields::Unit => quote! { #name::#ident },
+            Fields::Unnamed(_) => quote! { #name::#ident(..) },
+            Fields::Named(_) => quote! { #name::#ident { .. } },
+        };
 
+        // keymap_item
         match_arms.push(quote! {
-            #name::#ident => ::keymap::Item::new(
+            #variant => ::keymap::Item::new(
                 vec![#(#keys),*],
                 #doc.to_string()
             ),
         });
+
+        // keymap_config
+        if !item.ignore {
+            entries.push(quote! {
+                (
+                    #variant,
+                    ::keymap::Item::new(
+                        vec![#(#keys),*],
+                        #doc.to_string()
+                    )
+                ),
+            });
+        }
     }
 
     quote! {
