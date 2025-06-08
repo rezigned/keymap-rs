@@ -9,7 +9,6 @@
 * ✅ Declarative key mappings via configuration (e.g., YAML, JSON, etc.)
 * ⌨️ Supports single keys (e.g. `a`, `enter`, `ctrl-b`, etc.) and key **sequences** (e.g. `ctrl-b n`)
 * 🧠 Supports **key groups**:
-
   * `@upper` – uppercase letters
   * `@lower` – lowercase letters
   * `@alpha` – all alphabetic characters
