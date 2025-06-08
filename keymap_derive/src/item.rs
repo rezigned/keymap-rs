@@ -45,7 +45,7 @@ fn parse_ignore(variant: &Variant) -> bool {
                     ignore = meta.path.is_ident("ignore");
                     Ok(())
                 });
-            };
+            }
 
             ignore
         })

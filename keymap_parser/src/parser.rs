@@ -90,11 +90,11 @@ impl<'a> Parser<'a> {
         match self.next() {
             Some(ch) if ch == expected => Ok(()),
             Some(ch) => Err(ParseError {
-                message: format!("expected '{}', found '{}'", expected, ch),
+                message: format!("expected '{expected}', found '{ch}'"),
                 position: self.position - ch.len_utf8(),
             }),
             None => Err(ParseError {
-                message: format!("expected '{}', found end of input", expected),
+                message: format!("expected '{expected}', found end of input"),
                 position: self.position,
             }),
         }

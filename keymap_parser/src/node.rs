@@ -171,7 +171,7 @@ impl std::fmt::Display for CharGroup {
             Self::Alnum => "alnum",
             Self::Any => "any",
         };
-        write!(f, "@{}", name)
+        write!(f, "@{name}")
     }
 }
 
@@ -191,11 +191,11 @@ impl<'s> Deserialize<'s> for Node {
 impl Display for Node {
     /// Formats the node as a human-readable string (e.g., "ctrl-shift-a", "alt-f4").
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        MODIFIERS.iter().for_each(|m| {
+        for m in MODIFIERS.iter() {
             if self.modifiers & *m as u8 != 0 {
                 write!(f, "{m}{KEY_SEP}").unwrap();
             }
-        });
+        }
 
         match self.key {
             Key::Char(char) => write!(f, "{char}"),
