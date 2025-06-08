@@ -9,6 +9,8 @@ const DOC_IDENT: &str = "doc";
 pub(crate) struct Item<'a> {
     pub variant: &'a Variant,
     pub keys: Vec<String>,
+
+    #[allow(dead_code)]
     pub nodes: Vec<Vec<Node>>,
     pub description: String,
 }

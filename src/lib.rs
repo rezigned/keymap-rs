@@ -9,14 +9,15 @@ use std::fmt;
 // Re-exports
 pub use keymap_parser::parser;
 pub use config::{Config, DerivedConfig, Item, KeyMapConfig};
+pub use matcher::Matcher;
 
 #[cfg(feature = "derive")]
 #[doc(hidden)]
 pub use keymap_derive::KeyMap;
 
 pub mod backend;
-mod config;
-mod matcher;
+pub mod config;
+pub mod matcher;
 
 #[derive(Debug)]
 pub enum Error {

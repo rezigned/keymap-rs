@@ -1,6 +1,33 @@
+//! Key mapping configuration for customizable input bindings.
+//!
+//! This module defines a flexible and extensible system for mapping key
+//! sequences to actions or items in applications like command-line tools,
+//! games, or UI frameworks. It supports:
+//!
+//! - Default mappings via the [`KeyMapConfig`] trait.
+//! - Deserializable user configurations via [`Config<T>`].
+//! - Automatic fallback and merging behavior via [`DerivedConfig<T>`].
+//! - Lookup utilities to resolve parsed key sequences (from [`keymap_parser`]).
+//!
+//! The [`Item`] struct represents a user-facing description and set of key
+//! bindings. Mappings are indexed and reversed using [`Matcher`] to enable
+//! fast lookups from parsed sequences to items.
+//!
+//! ## Example Usage
+//!
+//! ```toml
+//! Create = { keys = ["c"], description = "Create a new item" }
+//! Delete = { keys = ["d", "d e", "@digit"], description = "Delete an item" }
+//! ```
+//!
+//! The parsed configuration allows reverse-lookup of actions based on input
+//! like `"d"` or `"1"` (with `@digit`), and supports default values through
+//! trait-based extension points.
+//!
+//! See [`Config`], [`DerivedConfig`], and [`Item`] for more details.
 use keymap_parser::{parse_seq, Node};
 use serde::{
-    de::{self, MapAccess, Visitor},
+    de::{MapAccess, Visitor},
     Deserialize, Deserializer,
 };
 use std::{fmt, marker::PhantomData, ops::Deref};
@@ -49,7 +76,7 @@ pub trait KeyMapConfig<T> {
     /// the default associations between keys and their corresponding items.
     /// These defaults will be incorporated into a [`keymap::Config<T>`]
     /// and can be overridden by user-supplied configuration when deserializing.
-    fn keymap_config() -> Vec<(T, Item)>;
+    fn keymap_config() -> Config<T>;
 
     /// Returns the [`Item`] associated with this particular variant.
     ///
@@ -218,6 +245,28 @@ pub struct Item {
 }
 
 impl<T> Config<T> {
+    pub fn new(items: Vec<(T, Item)>) -> Self {
+        let mut matcher = Matcher::new();
+
+        items.iter().enumerate().for_each(|(index, (_, item))| {
+            item.keys
+                .iter()
+                .map(|keys| parse_seq(keys).expect("a valid key"))
+                .for_each(|keys| {
+                    matcher.add(keys, index);
+                });
+        });
+
+        Self { items, matcher }
+    }
+
+    // fn merge(&mut self, items: Vec<(T, Item)>) {
+    //     let mut map: HashMap<T, Item> = self.items.into_iter().collect();
+    //
+    //     self.items.extend(items);
+    //
+    // }
+
     /// Lookup an `(T, Item)` pair by a parsed `Node`, returning a
     /// reference to the key type `T` and the associated `Item` if found.
     ///
@@ -382,26 +431,13 @@ where
                 M: MapAccess<'de>,
             {
                 let mut items = Vec::new();
-                let mut matcher = Matcher::new();
 
                 // For each entry in the map, deserialize `T` (the key) and `Item`
                 while let Some((t, item)) = map.next_entry::<T, Item>()? {
-                    let index = items.len();
-
-                    // For each key string in Item.keys, parse it and push (parsed, index)
-                    for raw_key in &item.keys {
-                        let parsed_nodes = parse_seq(raw_key)
-                            .map_err(de::Error::custom)?
-                            .into_iter()
-                            .collect::<Vec<_>>();
-
-                        matcher.add(parsed_nodes, index);
-                    }
-
                     items.push((t, item));
                 }
 
-                Ok(Config { items, matcher })
+                Ok(Config::new(items))
             }
         }
 
@@ -451,36 +487,24 @@ where
                 M: MapAccess<'de>,
             {
                 // Start with the default items from KeyMapConfig
-                let mut items = T::keymap_config();
-                let mut matcher = Matcher::new();
+                let mut config = T::keymap_config();
 
                 // Merge user-specified entries: replace or append
                 while let Some((t, item)) = map.next_entry::<T, Item>()? {
-                    if let Some(pos) = items
+                    if let Some(pos) = config
+                        .items
                         .iter()
                         .position(|(existing_key, _)| existing_key == &t)
                     {
                         // Override the default Item if the key matches
-                        items[pos].1 = item;
+                        config.items[pos].1 = item;
                     } else {
                         // Append a new entry
-                        items.push((t, item));
+                        config.items.push((t, item));
                     }
                 }
 
-                // Rebuild reverse-lookup index for all items
-                for (index, (_, item)) in items.iter().enumerate() {
-                    for raw_key in &item.keys {
-                        let parsed_nodes = parse_seq(raw_key)
-                            .map_err(de::Error::custom)?
-                            .into_iter()
-                            .collect::<Vec<_>>();
-
-                        matcher.add(parsed_nodes, index);
-                    }
-                }
-
-                Ok(DerivedConfig(Config { items, matcher }))
+                Ok(DerivedConfig(Config::new(config.items)))
             }
         }
 

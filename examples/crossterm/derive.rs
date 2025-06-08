@@ -10,11 +10,12 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use crossterm_utils::output;
-use keymap::{KeyMap, KeyMapConfig};
+use keymap::{KeyMapConfig};
 use std::io;
 
 fn main() -> io::Result<()> {
-    config_derive::print_config(&Action::keymap_config());
+    let config = Action::keymap_config();
+    config_derive::print_config(&config.items);
 
     enable_raw_mode()?;
 
@@ -24,14 +25,14 @@ fn main() -> io::Result<()> {
         let event = read()?;
 
         if let Event::Key(key) = event {
-            match Action::try_from(KeyMap::try_from(&key).unwrap()) {
-                Ok(action) => match action {
+            match config.get(&key) {
+                Some(action) => match action {
                     Action::Quit => break,
                     Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => {
                         send(format!("{action:?}"))?
                     }
                 },
-                Err(e) => send(e.to_string())?,
+                None => send(format!("Unknown key {key:?}"))?,
             }
         }
     }

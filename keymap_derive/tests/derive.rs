@@ -22,6 +22,8 @@ mod tests {
 
     #[test]
     fn test_derive_key() {
+        let config = Action::keymap_config();
+
         [
             (Action::Create, "enter"),
             (Action::Delete, "d"),
@@ -29,20 +31,22 @@ mod tests {
             (Action::Delete, "delete"),
         ]
         .map(|(action, input)| {
-            let key = keymap::parse_seq(input).unwrap();
-            assert_eq!(action, Action::try_from(key).unwrap());
+            let key = keymap_parser::parse_seq(input).unwrap();
+            assert_eq!(&action, config.get_item_by_keys(&key).unwrap().0);
         });
     }
 
     #[test]
     fn test_derive_char_group() {
+        let config = Action::keymap_config();
+
         [
             (Action::Delete, "x"), // @lower
             (Action::Delete, "1"), // @digit
         ]
         .map(|(action, input)| {
-            let key = keymap::parse_seq(input).unwrap();
-            assert_eq!(action, Action::try_from(key).unwrap());
+            let key = keymap_parser::parse_seq(input).unwrap();
+            assert_eq!(&action, config.get_item_by_keys(&key).unwrap().0);
         });
     }
 
@@ -51,7 +55,7 @@ mod tests {
         let config = Action::keymap_config();
 
         assert_eq!(
-            config,
+            config.items,
             vec![
                 (
                     Action::Create,
@@ -63,7 +67,9 @@ mod tests {
                 (
                     Action::Delete,
                     Item::new(
-                        ["d", "delete", "d d", "@lower", "@digit"].map(ToString::to_string).to_vec(),
+                        ["d", "delete", "d d", "@lower", "@digit"]
+                            .map(ToString::to_string)
+                            .to_vec(),
                         "Delete a file".to_string()
                     )
                 ),

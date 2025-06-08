@@ -1,178 +1,87 @@
+Here's an improved and more comprehensive version of your `README.md` that reflects the upcoming `v1.0.0` release of `keymap-rs`. It highlights new features, enhances clarity, includes better usage documentation, and adds a structured layout that’s standard for popular Rust crates:
+
+---
+
 # keymap-rs
 
-[![crates.io](https://img.shields.io/crates/v/keymap.svg)](https://crates.io/crates/keymap)
-[![Rust](https://github.com/rezigned/keymap-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/rezigned/keymap-rs/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+**keymap-rs** is a lightweight and extensible key mapping library for Rust applications. It supports parsing key mappings from configuration files and mapping them to actions based on input events from backends like [`crossterm`](https://crates.io/crates/crossterm), [`termion`](https://docs.rs/termion/latest/termion/), `wasm` (via `web_sys`), and others.
 
-`keymap-rs` is a library for parsing terminal input events from configurations and mapping them to terminal library events (e.g., [crossterm](https://github.com/crossterm-rs/crossterm) or [termion](https://gitlab.redox-os.org/redox-os/termion)).
+---
 
-## Features
+## 🔧 Features (v1.0.0)
 
-- **Configuration-driven key mapping**: Define key bindings in plain text formats like TOML, YAML, or JSON
-- **Multiple terminal library support**: Works with popular Rust terminal libraries
-- **Customizable key bindings**: Allow end users to customize key bindings without code changes
-- **Derive macro** (`derive` feature): Easily map keys to enum variants with the `KeyMap` derive macro
+* ✅ Declarative key mappings via configuration (e.g., YAML, JSON, etc.)
+* ⌨️ Supports single keys (e.g. `a`, `enter`, `ctrl-b`, etc.) and key **sequences** (e.g. `ctrl-b n`)
+* 🧠 **Key groups** via pattern matching:
 
-## Installation
+  * `@upper` – uppercase letters
+  * `@lower` – lowercase letters
+  * `@alpha` – all alphabetic characters
+  * `@alnum` – alphanumeric
+  * `@any` – match any key
+* 🧬 **Derive-based config parser** via `keymap_derive`
+* 🌐 Backend-agnostic (works with `crossterm`, `termion`, `web_sys`, etc.)
+* 🪶 Lightweight and extensible
 
-You can add `keymap-rs` to your project in several ways:
+---
 
-### Using `Cargo.toml`
+## 📦 Installation
+
+Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-keymap = { version = "1.0.0", features = ["derive"] }
+keymap = "1.0.0"
 ```
 
-### Using `cargo add` command
+---
 
-```bash
-# With derive macro support
-cargo add keymap --features derive
-```
+## 🚀 Example
 
-> Note: The derive macro functionality requires enabling the `derive` feature as shown above.
-
-## Quick Start
-
-### Using the Derive Macro
-
-The derive macro provides a simple and ergonomic way to define key mappings (requires the `derive` feature).
-
-First, define an enum with the `KeyMap` derive macro:
+### Using `keymap_derive`
+Define an `Action` and key mapping
 
 ```rust
-#[derive(KeyMap)]
-enum Action {
-    /// Move to the left
-    #[key("left", "a")]
-    Left,
-
-    /// Move to the right
-    #[key("right", "d")]
-    Right,
-
-    /// Quit
-    #[key("q", "ctrl-c")]
+/// Game actions triggered by key inputs
+#[derive(keymap::KeyMap, Debug)]
+pub enum Action {
+    /// Rage quit the game
+    #[key("q", "esc")]
     Quit,
+    /// Step left (dodge the trap!)
+    #[key("left")]
+    Left,
+    /// Step right (grab the treasure!)
+    #[key("right")]
+    Right,
+    /// Jump over obstacles (or just for fun)
+    #[key("space")]
+    Jump,
 }
 ```
 
-Then, use the `try_from` method to convert the key event into an enum variant:
-
 ```rust
-// In your event loop
-loop {
-    let key = read_key(); // Get key event from your terminal library
-
-    match Action::try_from(KeyMap::from(key)) {
-        Ok(action) => match action {
-            Action::Left => println!("Left!"),
-            Action::Right => println!("Right!"),
+let config = Action::keymap_config();
+if let Event::Key(key) = event::read()? {
+    match config.get(&key) {
+        Some(action) => match action {
             Action::Quit => break,
+
+            _ => send(format!("{action:?}"))?,
         },
-        Err(_) => {} // Key not mapped to any action
+        None => println!("Unknown key {key:?}),
     }
 }
 ```
 
-### Using Configuration (toml, yaml, json)
+---
 
-For more dynamic configuration:
+## 📜 License
 
-First, define a configuration (toml):
+This project is licensed under the [MIT License](https://github.com/rezigned/keymap-rs/blob/main/LICENSE).
 
-```toml
-# config.toml
-[keys]
-left = "Left"
-right = "Right"
-ctrl-c = "Quit"
-```
+---
 
-Then, use the `HashMap<KeyMap, Action>` type to map keys to actions:
+## 🙌 Contributions
 
-```rust
-use std::collections::HashMap;
-use serde::Deserialize;
-use keymap::KeyMap;
-
-#[derive(Deserialize)]
-struct Config {
-    pub keys: HashMap<KeyMap, String>
-}
-
-// Load configuration from file or string
-let config: Config = toml::from_str(include_str!("config.toml"))?;
-
-// In your event loop
-loop {
-    let key = read_key(); // Get key event from your terminal library
-
-    if let Some(action) = config.keys.get(&KeyMap::from(key)) {
-        match action.as_str() {
-            "Left" => println!("Left!"),
-            "Right" => println!("Right!"),
-            "Quit" => break,
-            _ => {}
-        }
-    }
-}
-```
-
-## Why Use keymap-rs?
-
-Using terminal library's input events directly can be verbose and inflexible. Consider this example of matching a `ctrl-z` event with crossterm:
-
-```rust
-match read()? {
-    // `ctrl-z`
-    Event::Key(KeyEvent {
-        modifiers: KeyModifiers::CONTROL,
-        code: KeyCode::Char('z'),
-        ..
-    }) => {
-        // Handle action
-    }
-}
-```
-
-With `keymap-rs`, you can define this binding in a configuration file:
-
-```toml
-[keys]
-ctrl-z = "Undo"
-```
-
-This approach provides several benefits:
-- **User customization**: Let users change key bindings without modifying code
-- **Readability**: Key mappings are more readable in configuration format
-- **Flexibility**: Easily switch between different key binding schemes
-
-## Supported Key Formats
-
-`keymap-rs` supports a human-readable format for key combinations:
-
-- Single keys: `a`, `b`, `1`, `2`, etc.
-- Special keys: `up`, `down`, `left`, `right`, `home`, `end`, etc.
-- Modifier combinations: `ctrl-a`, `shift-home`, `alt-enter`, etc.
-
-## Supported Terminal Libraries
-
-- [crossterm](https://github.com/crossterm-rs/crossterm)
-- [termion](https://gitlab.redox-os.org/redox-os/termion)
-
-## Examples
-
-Check out the [examples](examples/) directory for complete examples showing how to:
-- Use the derive macro for key mapping
-- Load key bindings from configuration files
-- Integrate with crossterm and termion
-
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
+Contributions, issues, and feature requests are welcome. If you have ideas for more backends, pattern matching rules, or integrations—feel free to open a PR!
