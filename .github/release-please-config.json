@@ -1,0 +1,33 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "include-v-in-tag": true,
+  "packages": {
+    ".": {
+      "release-type": "rust",
+      "component": "keymap"
+    },
+    "keymap_derive": {
+      "release-type": "rust",
+      "component": "keymap_derive"
+    },
+    "keymap_parser": {
+      "release-type": "rust",
+      "component": "keymap_parser"
+    }
+  },
+  "plugins": [
+    {
+      "type": "cargo-workspace",
+      "merge": false
+    },
+    {
+      "type": "linked-versions",
+      "groupName": "crates",
+      "components": [
+        "keymap",
+        "keymap_derive",
+        "keymap_parser"
+      ]
+    }
+  ]
+}

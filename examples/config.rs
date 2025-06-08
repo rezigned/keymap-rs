@@ -1,17 +1,14 @@
 use std::collections::HashMap;
-
 use keymap::KeyMap;
 use serde::Deserialize;
-use strum_macros::Display;
 
-#[derive(Debug, Deserialize, PartialEq, Display)]
+#[derive(Debug, Deserialize, PartialEq)]
 pub(crate) enum Action {
-    Bottom,
-    Down,
-    Explode,
     Jump,
-    Top,
     Up,
+    Down,
+    Left,
+    Right,
     Quit,
 }
 
@@ -23,13 +20,18 @@ pub(crate) struct Config(pub HashMap<KeyMap, Action>);
 pub(crate) const CONFIG_DATA: &str = r#"
 up = "Up"
 down = "Down"
-ctrl-z = "Explode"
-shift-g = "Bottom"
-g = "Top"
+left = "Left"
+right = "Right"
+ctrl-g = "Jump"
+space = "Jump"
 q = "Quit"
 esc = "Quit"
-space = "Jump"
 "#;
+
+#[allow(unused)]
+pub(crate) fn parse_config() -> Config {
+    toml::from_str(CONFIG_DATA).unwrap()
+}
 
 #[allow(unused)]
 fn main() {}

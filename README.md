@@ -1,90 +1,159 @@
 # keymap-rs
 
-[![crates.io](https://img.shields.io/crates/v/keymap.svg)](https://crates.io/crates/keymap)
-[![Rust](https://github.com/rezigned/keymap-rs/actions/workflows/ci.yml/badge.svg)](https://github.com/rezigned/keymap-rs/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://opensource.org/licenses/MIT)
+**keymap-rs** is a lightweight and extensible key mapping library for Rust applications. It supports parsing key mappings from configuration files and mapping them to actions based on input events from backends like [`crossterm`](https://crates.io/crates/crossterm), [`termion`](https://docs.rs/termion/latest/termion/), `wasm` (via `web_sys`), and others.
 
-`keymap-rs` is a library for parsing terminal input event from configurations and mapping them to the terminal library's event. (e.g. [crossterm](https://github.com/crossterm-rs/crossterm) or [termion](https://gitlab.redox-os.org/redox-os/termion))
+---
 
-## Introduction
+## 🔧 Features (v1.0.0)
 
-Using terminal library's input event directly is sometimes not ideal. Let consider the following example of matching `ctrl-z` event:
+* ✅ Declarative key mappings via configuration (e.g., YAML, JSON, etc.)
+* ⌨️ Supports single keys (e.g. `a`, `enter`, `ctrl-b`, etc.) and key **sequences** (e.g. `ctrl-b n`)
+* 🧠 Supports **key groups**:
+  * `@upper` – uppercase letters
+  * `@lower` – lowercase letters
+  * `@alpha` – all alphabetic characters
+  * `@alnum` – alphanumeric
+  * `@any` – match any key
+* 🧬 **Derive-based config parser** via `keymap_derive`
+* 🌐 Backend-agnostic (works with `crossterm`, `termion`, `web_sys`, etc.)
+* 🪶 Lightweight and extensible
+
+---
+
+## 📦 Installation
+
+Run the following command:
+
+> \[!NOTE]
+> By default, this installs with `crossterm` as the default backend. You can enable a different backend by specifying the feature flag:
+>
+> ```sh
+> cargo add keymap --features termion  # or web_sys, etc.
+> ```
+
+```sh
+cargo add keymap
+```
+
+---
+
+## 🚀 Example
+
+### Using `keymap_derive`
+
+Define your actions and key mappings:
 
 ```rust
-match read() {
-    // `ctrl-z`
-    Event::Key(KeyEvent {
-        modifiers: KeyModifiers::CONTROL,
-        KeyCode::Char('z'),
-        ..
-    }) => {}
+/// Game actions
+#[derive(keymap::KeyMap, Debug)]
+pub enum Action {
+    /// Rage quit the game
+    #[key("q", "esc")]
+    Quit,
+
+    /// Step left (dodge the trap!)
+    #[key("left")]
+    Left,
+
+    /// Step right (grab the treasure!)
+    #[key("right")]
+    Right,
+
+    /// Jump over obstacles (or just for fun)
+    #[key("space")]
+    Jump,
 }
 ```
 
-This code works perfectly fine. But if we want the end users to customize the key mappings to a different one (e.g. `ctrl-x`, `shift-c`, etc.). How can we achieve that? The answer is `keymap`.
-
-`keymap` provides flexibility by allowing developers to define input event in plain-text, which can be used in any configuration formats (e.g. `yaml`, `toml`, etc.) and convert them to the terminal's event.
-
-```toml
-[keys]
-ctrl-z = "..."
-```
-
-The `ctrl-z` above will be converted to `KeyEvent { ... }` in the first example.
-
-## Getting started
-
-_Please check the [examples](examples/) directory for complete examples._
-
-<details>
-<summary>
-Click to show <code>Cargo.toml</code>.
-</summary>
-
-```toml
-[dependencies]
-keymap = "0.1"
-```
-</details>
-
-Let's started by defining a simple structure for mapping input key to `String`.
+Use the config:
 
 ```rust
-use keymap::KeyMap;
-use serde::Deserialize;
+let config = Action::keymap_config();
 
-#[derive(Deserialize)]
-struct Config(pub HashMap<KeyMap, String>)
-
-const CONFIG: &str = r#"
-up     = "Up"
-down   = "Down"
-ctrl-c = "Quit"
-"#;
-```
-
-Then in your terminal library of choice (we'll be using [crossterm](https://github.com/crossterm-rs/crossterm) here). You can use any deserializer (e.g. `toml`, `json`, etc.) to deserialize a key from the configuration above into the terminal library's event (e.g. `crossterm::event::KeyEvent`).
-
-```rust
-let config: Config = toml::from_str(CONFIG).unwrap();
-
-// Read input event
-match read()? {
-    Event::Key(key) => {
-        // `KeyMap::from` will convert `crossterm::event::KeyEvent` to `keymap::KeyMap`
-        if let Some(action) = config.0.get(&Key::from(key)) {
-            match action {
-                "Up" => println!("Move up!"),
-                "Down" => println!("Move down!"),
-                // ...
-                "Quit" => break,
-            }
-        }
+if let Event::Key(key) = event::read()? {
+    match config.get(&key) {
+        Some(action) => match action {
+            Action::Quit => break,
+            Action::Jump => println!("Jump Jump!"),
+            _ => println!("{:?} - {}", action, action.keymap_item().description),
+        },
+        None => println!("Unknown key {:?}", key),
     }
 }
 ```
 
-### Supported Terminal Libraries
+### Using external configuration (e.g. `toml`, `yaml`, etc.)
 
-* [crossterm](https://github.com/crossterm-rs/crossterm)
-* [termion](https://gitlab.redox-os.org/redox-os/termion)
+Define a config:
+
+```toml
+Jump = { keys = ["j", "up"], description = "Jump with 'j'!" }
+Quit = { keys = ["@any"], description = "Quit!" }
+```
+
+#### Deserialize with `Config<T>`
+
+> [!NOTE]
+> The table below shows all keys that are deserialized only from the configuration file. Keys defined via `#[key("..")]` are **not** included.
+>
+> | Key           | Action |
+> | ------------- | ------ |
+> | `"j"`, `"up"` | Jump   |
+> | `@any`        | Quit   |
+
+```rust
+let config: Config<Action> = toml::from_str("./config.toml").unwrap();
+```
+
+#### Deserialize with `DerivedConfig<T>`
+
+> [!NOTE]
+> The table below shows all keys when using both the configuration file **and** the keys defined via `#[key("..")]`. The sets are merged.
+>
+> | Key           | Action |
+> | ------------- | ------ |
+> | `"j"`, `"up"` | Jump   |
+> | `"left"`      | Left   |
+> | `"right"`     | Right  |
+> | `@any`        | Quit   |
+
+```rust
+let config: DerivedConfig<Action> = toml::from_str("./config.toml").unwrap();
+```
+
+---
+### 🛠️ Bonus: Compile-time Validation
+
+One powerful advantage of using the `#[key(".."))]` attribute macro from `keymap_derive` is that invalid key definitions are caught at **compile time**, ensuring early feedback and safety.
+
+#### Example: Invalid Key
+
+```rust
+#[derive(keymap::KeyMap)]
+enum Action {
+    #[key("enter2", "ctrl-b n")]
+    Invalid,
+}
+```
+
+#### Compile Error
+
+```
+error: Invalid key "enter2": Parse error at position 5: expect end of input, found: 2
+ --> keymap_derive/tests/derive.rs:7:11
+  |
+7 |     #[key("enter2", "ctrl-b n")]
+  |           ^^^^^^^^
+```
+
+This prevents runtime surprises and provides clear diagnostics during development.
+
+## 📜 License
+
+This project is licensed under the [MIT License](https://github.com/rezigned/keymap-rs/blob/main/LICENSE).
+
+---
+
+## 🙌 Contributions
+
+Contributions, issues, and feature requests are welcome. Have an idea for a new backend, pattern rule, or integration? Open a PR!
