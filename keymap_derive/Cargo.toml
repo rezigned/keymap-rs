@@ -1,0 +1,18 @@
+[package]
+name = "keymap_derive"
+version = "1.0.0"
+edition = "2021"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+keymap_parser = { path = "../keymap_parser/" }
+proc-macro2 = "1.0.95"
+quote = "1.0.40"
+syn = "2.0.101"
+
+[dev-dependencies]
+keymap = { path = "../" }
+serde = { version = "1.0.219", features = ["derive"] }
+toml = "0.8"
