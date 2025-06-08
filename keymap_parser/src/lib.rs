@@ -29,7 +29,6 @@
 //! ```
 pub mod node;
 pub mod parser;
-pub mod matcher;
 
 pub use node::{Key, Modifier, Modifiers, Node};
 pub use parser::{parse, parse_seq};

@@ -5,7 +5,7 @@ use serde::{
 };
 use std::{fmt, marker::PhantomData, ops::Deref};
 
-use crate::KeyMap;
+use crate::{matcher::Matcher, KeyMap};
 
 /// A trait for providing a default mapping between keys and items.
 ///
@@ -114,7 +114,7 @@ pub struct Config<T> {
     /// `Vec<Node>` is the parsed key sequence and `usize` is an index into
     /// the `items` vector. This allows efficient lookup of `(T, Item)` by
     /// matching against a parsed `Node` sequence.
-    keys: Vec<(Vec<Node>, usize)>,
+    matcher: Matcher<usize>,
 }
 
 /// A configuration that merges user-provided entries with defaults.
@@ -306,11 +306,9 @@ impl<T> Config<T> {
     /// }
     /// ```
     pub fn get_item_by_keys(&self, keys: &[Node]) -> Option<(&T, &Item)> {
-        self.keys
-            .iter()
-            .find(|(nodes, _)| nodes == keys)
-            .and_then(|(_, i)| self.items.get(*i))
-            .map(|(t, item)| (t, item))
+        self.matcher
+            .get(keys)
+            .map(|i| (&self.items[*i].0, &self.items[*i].1))
     }
 }
 
@@ -384,7 +382,7 @@ where
                 M: MapAccess<'de>,
             {
                 let mut items = Vec::new();
-                let mut keys = Vec::new();
+                let mut matcher = Matcher::new();
 
                 // For each entry in the map, deserialize `T` (the key) and `Item`
                 while let Some((t, item)) = map.next_entry::<T, Item>()? {
@@ -396,13 +394,14 @@ where
                             .map_err(de::Error::custom)?
                             .into_iter()
                             .collect::<Vec<_>>();
-                        keys.push((parsed_nodes, index));
+
+                        matcher.add(parsed_nodes, index);
                     }
 
                     items.push((t, item));
                 }
 
-                Ok(Config { items, keys })
+                Ok(Config { items, matcher })
             }
         }
 
@@ -453,7 +452,7 @@ where
             {
                 // Start with the default items from KeyMapConfig
                 let mut items = T::keymap_config();
-                let mut keys = Vec::new();
+                let mut matcher = Matcher::new();
 
                 // Merge user-specified entries: replace or append
                 while let Some((t, item)) = map.next_entry::<T, Item>()? {
@@ -476,11 +475,12 @@ where
                             .map_err(de::Error::custom)?
                             .into_iter()
                             .collect::<Vec<_>>();
-                        keys.push((parsed_nodes, index));
+
+                        matcher.add(parsed_nodes, index);
                     }
                 }
 
-                Ok(DerivedConfig(Config { items, keys }))
+                Ok(DerivedConfig(Config { items, matcher }))
             }
         }
 

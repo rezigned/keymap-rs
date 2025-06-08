@@ -16,6 +16,7 @@ pub use keymap_derive::KeyMap;
 
 pub mod backend;
 mod config;
+mod matcher;
 
 #[derive(Debug)]
 pub enum Error {

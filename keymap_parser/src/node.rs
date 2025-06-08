@@ -4,7 +4,7 @@
 //! It also implements deserialization and display formatting for these types.
 use std::{
     fmt::{Display, Formatter},
-    hash::{Hash, Hasher},
+    hash::Hash,
     ops::BitOr,
 };
 
@@ -19,7 +19,7 @@ pub(crate) const KEY_SEP: char = '-';
 /// Represents a keyboard input node, consisting of modifier keys and a main key.
 ///
 /// For example, "Ctrl-Shift-A" would be represented as a `Node` with the `Ctrl` and `Shift` modifiers and the `Char('A')` key.
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Node {
     /// Bitflags representing active modifiers (see [`Modifier`]).
     pub modifiers: Modifiers,
@@ -85,7 +85,7 @@ pub(crate) const MODIFIERS: [Modifier; 4] = [
 /// Supported keyboard key types for input nodes.
 ///
 /// This enum includes character keys, function keys, and special keys.
-#[derive(Clone, Debug, Display, Eq, EnumString, AsRefStr)]
+#[derive(Clone, Debug, Display, PartialEq, Eq, Hash, EnumString, AsRefStr)]
 #[strum(serialize_all = "lowercase")]
 pub enum Key {
     /// Shift+Tab / Back tab.
@@ -148,73 +148,6 @@ pub enum CharGroup {
     Any,
 }
 
-impl PartialEq for Node {
-    fn eq(&self, other: &Self) -> bool {
-        self.modifiers == other.modifiers && self.key == other.key
-    }
-}
-
-impl Hash for Node {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        self.modifiers.hash(state);
-        self.key.hash(state);
-    }
-}
-
-impl PartialEq for Key {
-    fn eq(&self, other: &Self) -> bool {
-        match (self, other) {
-            (Key::BackTab, Key::BackTab) => true,
-            (Key::Backspace, Key::Backspace) => true,
-            (Key::Delete, Key::Delete) => true,
-            (Key::End, Key::End) => true,
-            (Key::Down, Key::Down) => true,
-            (Key::Enter, Key::Enter) => true,
-            (Key::Esc, Key::Esc) => true,
-            (Key::Home, Key::Home) => true,
-            (Key::Insert, Key::Insert) => true,
-            (Key::Left, Key::Left) => true,
-            (Key::PageDown, Key::PageDown) => true,
-            (Key::PageUp, Key::PageUp) => true,
-            (Key::Right, Key::Right) => true,
-            (Key::Space, Key::Space) => true,
-            (Key::Tab, Key::Tab) => true,
-            (Key::Up, Key::Up) => true,
-            (Key::Char(a), Key::Char(b)) => a == b,
-            (Key::F(a), Key::F(b)) => a == b,
-            (Key::Group(a), Key::Group(b)) => a == b,
-
-            // Match char group against char
-            (Key::Group(a), Key::Char(b)) => a.matches(*b),
-            (Key::Group(CharGroup::Any), _) => true,
-            _ => false,
-        }
-    }
-}
-
-impl Hash for Key {
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        match self {
-            Key::Char(ch) => {
-                state.write_u8(1);
-                ch.hash(state)
-            }
-            Key::F(n) => {
-                state.write_u8(2);
-                n.hash(state)
-            }
-            Key::Group(group) => {
-                state.write_u8(3);
-                group.hash(state)
-            }
-            key => {
-                state.write_u8(4);
-                key.to_string().hash(state)
-            }
-        }
-    }
-}
-
 impl CharGroup {
     pub fn matches(&self, c: char) -> bool {
         match self {
@@ -270,43 +203,5 @@ impl Display for Node {
             Key::Group(n) => write!(f, "{n}"),
             _ => write!(f, "{}", self.key),
         }
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_node_eq() {
-        [
-            ("1", "1", true),
-            ("a", "a", true),
-            ("a", "b", false),
-            ("f1", "f1", true),
-            ("f1", "f12", false),
-            ("ctrl-a", "ctrl-a", true),
-            ("ctrl-a", "ctrl-b", false),
-            // Swap order
-            ("ctrl-alt-a", "alt-ctrl-a", true),
-            ("ctrl-alt-shift-a", "alt-shift-ctrl-a", true),
-            // Char groups
-            ("@digit", "1", true),
-            ("@alnum", "1", true),
-            ("@alpha", "1", false),
-            ("@lower", "l", true),
-            ("@lower", "L", false),
-        ]
-        .iter()
-        .for_each(|(a, b, eq)| {
-            let a = parse(a).unwrap();
-            let b = parse(b).unwrap();
-
-            if *eq {
-                assert_eq!(a, b);
-            } else {
-                assert_ne!(a, b);
-            }
-        });
     }
 }
