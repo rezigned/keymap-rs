@@ -4,14 +4,15 @@ mod config_derive;
 mod termion_utils;
 
 use config_derive::Action;
-use keymap::{KeyMap, KeyMapConfig};
+use keymap::KeyMapConfig;
 use std::io::{stdin, Write};
 use termion::event::Event;
 use termion::input::TermRead;
 use termion_utils::{output, print, Result};
 
 fn main() -> Result {
-    config_derive::print_config(&Action::keymap_config());
+    let config = Action::keymap_config();
+    config_derive::print_config(&config.items);
 
     let stdin = stdin();
     let mut stdout = output();
@@ -20,8 +21,8 @@ fn main() -> Result {
         let mut send = |s: &str| print(&mut stdout, s);
 
         if let Event::Key(key) = event? {
-            match Action::try_from(KeyMap::try_from(&key).unwrap()) {
-                Ok(action) => match action {
+            match config.get(&key) {
+                Some(action) => match action {
                     Action::Up => send("Up!"),
                     Action::Down => send("Down!"),
                     Action::Jump => send("Jump!"),
@@ -29,7 +30,7 @@ fn main() -> Result {
                     Action::Right => send("Right!"),
                     Action::Quit => break,
                 },
-                Err(ref e) => send(e),
+                None => send(&format!("Unknown key {key:?}")),
             };
         }
 
