@@ -16,10 +16,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - uses: google-github-actions/release-please-action@v3
+      - uses: googleapis/release-please-action@v4
         id: release
         with:
-          release-type: rust
+          config-file: .github/release-please-config.json
+          manifest-file: .github/.release-please-manifest.json
 
     outputs:
       release_created: ${{ steps.release.outputs.release_created }}
@@ -35,9 +36,13 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
+      - name: Install cargo-workspaces
+        run: cargo install cargo-workspaces
+
       - name: Publish
         run: >
-          cargo publish
-          --verbose
+          cargo workspaces publish
+          --yes
           --locked
+          --from-git
           --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
