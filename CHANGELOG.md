@@ -1,5 +1,16 @@
 # Changelog
 
+## [1.0.0](https://github.com/rezigned/keymap-rs/compare/v0.4.1...v1.0.0) (2025-06-09)
+
+
+### ⚠ BREAKING CHANGES
+
+* v1.0.0 release 🎉 ([#17](https://github.com/rezigned/keymap-rs/issues/17))
+
+### Features
+
+* v1.0.0 release 🎉 ([#17](https://github.com/rezigned/keymap-rs/issues/17)) ([be79bc8](https://github.com/rezigned/keymap-rs/commit/be79bc823497927c960308d3c50ba046f6f9f255))
+
 ## [1.0.0](https://github.com/rezigned/keymap-rs/compare/v0.4.1...v1.0.0) (2025-06-08)
 
 ### ⚠ BREAKING CHANGES
