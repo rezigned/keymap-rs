@@ -2,7 +2,7 @@
 name = "keymap"
 description = "A library for parsing input events from configuration"
 authors = ["Marut Khumtong <code@rezigned.com>"]
-version = "1.0.0"
+version = "1.0.0-rc"
 homepage = "https://github.com/rezigned/keymap-rs"
 repository = "https://github.com/rezigned/keymap-rs"
 edition = "2021"
@@ -19,8 +19,8 @@ members = [
 ]
 
 [dependencies]
-keymap_parser = { path = "./keymap_parser", version = "1.0.0" }
-keymap_derive = { path = "./keymap_derive", version = "1.0.0", optional = true }
+keymap_parser = { path = "./keymap_parser", version = "1.0.0-rc" }
+keymap_derive = { path = "./keymap_derive", version = "1.0.0-rc", optional = true }
 crossterm = { version = "0.29", optional = true }
 termion = { version = "4.0", optional = true }
 serde = { version = "1.0", features = ["derive"] }
