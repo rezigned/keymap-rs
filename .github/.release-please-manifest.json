@@ -1,5 +1,5 @@
 {
-  ".": "0.4.1",
-  "keymap_derive": "0.4.1",
-  "keymap_parser": "0.4.1"
+  ".": "1.0.0-rc",
+  "keymap_derive": "1.0.0-rc",
+  "keymap_parser": "1.0.0-rc"
 }
