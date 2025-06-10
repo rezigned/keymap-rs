@@ -1,5 +1,32 @@
 # Changelog
 
+## [1.0.0-rc](https://github.com/rezigned/keymap-rs/compare/keymap-v0.4.1...keymap-v1.0.0-rc) (2025-06-10)
+
+
+### ⚠ BREAKING CHANGES
+
+* v1.0.0 release 🎉 ([#17](https://github.com/rezigned/keymap-rs/issues/17))
+
+### Features
+
+* Convert from Backend::Key to Node ([#10](https://github.com/rezigned/keymap-rs/issues/10)) ([2b46c7f](https://github.com/rezigned/keymap-rs/commit/2b46c7fe0fa4ec0f23555642c3f1464544cf59d4))
+* Expose 'parse' function ([#7](https://github.com/rezigned/keymap-rs/issues/7)) ([3180c28](https://github.com/rezigned/keymap-rs/commit/3180c28992f30de63a48b1d2647f99637e4d020d))
+* use char instead of u8 for parser's input to improve error message ([e1c1eb1](https://github.com/rezigned/keymap-rs/commit/e1c1eb1227443e86dbb3a806aee868ea14e9fe45))
+* v1.0.0 release 🎉 ([#17](https://github.com/rezigned/keymap-rs/issues/17)) ([6c354de](https://github.com/rezigned/keymap-rs/commit/6c354def8dbaefdadbd3a6104e9168621b51ee0a))
+
+
+### Bug Fixes
+
+* update dependencies ([#12](https://github.com/rezigned/keymap-rs/issues/12)) ([2d0bfda](https://github.com/rezigned/keymap-rs/commit/2d0bfda90e3eff9c2b89079f1096f08de666b600))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * keymap_parser bumped from 1.0.0 to 1.0.0-rc
+    * keymap_derive bumped from 1.0.0 to 1.0.0-rc
+
 ## [1.0.0](https://github.com/rezigned/keymap-rs/compare/v0.4.1...v1.0.0) (2025-06-08)
 
 ### ⚠ BREAKING CHANGES
