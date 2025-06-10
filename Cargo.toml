@@ -1,7 +1,7 @@
 [package]
 name = "keymap"
 description = "A lightweight key mapping library with compile-time validated derive macros and declarative configuration for multiple backends."
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 authors.workspace = true
 documentation.workspace = true
 repository.workspace = true
@@ -27,8 +27,8 @@ keywords = ["terminal", "input", "event", "config", "keymap", "keybinding"]
 license = "MIT"
 
 [dependencies]
-keymap_parser = { path = "./keymap_parser", version = "1.0.0-rc.1" }
-keymap_derive = { path = "./keymap_derive", version = "1.0.0-rc.1", optional = true }
+keymap_parser = { path = "./keymap_parser", version = "1.0.0-rc.2" }
+keymap_derive = { path = "./keymap_derive", version = "1.0.0-rc.2", optional = true }
 crossterm = { version = "0.29", optional = true }
 termion = { version = "4.0", optional = true }
 serde = { version = "1.0", features = ["derive"] }
