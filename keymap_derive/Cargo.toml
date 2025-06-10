@@ -1,7 +1,14 @@
 [package]
 name = "keymap_derive"
+description = "A derive macro to generate compile-time validated key mappings for enums, enabling declarative and ergonomic key binding support."
 version = "1.0.0-rc"
 edition = "2021"
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
+rust-version.workspace = true
 
 [lib]
 proc-macro = true

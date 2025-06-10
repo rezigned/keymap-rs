@@ -1,13 +1,7 @@
 [package]
 name = "keymap"
-description = "A library for parsing input events from configuration"
-authors = ["Marut Khumtong <code@rezigned.com>"]
+description = "A lightweight key mapping library with compile-time validated derive macros and declarative configuration for multiple backends."
 version = "1.0.0-rc"
-homepage = "https://github.com/rezigned/keymap-rs"
-repository = "https://github.com/rezigned/keymap-rs"
-edition = "2021"
-keywords = ["terminal", "event", "config", "keymapping", "keybinding"]
-license = "MIT"
 
 [lib]
 doctest = false
@@ -17,6 +11,14 @@ members = [
     "keymap_derive",
     "keymap_parser",
 ]
+
+[workspace.package]
+authors = ["Marut Khumtong <code@rezigned.com>"]
+homepage = "https://github.com/rezigned/keymap-rs"
+repository = "https://github.com/rezigned/keymap-rs"
+edition = "2021"
+keywords = ["terminal", "input", "event", "config", "keymap", "keybinding"]
+license = "MIT"
 
 [dependencies]
 keymap_parser = { path = "./keymap_parser", version = "1.0.0-rc" }
