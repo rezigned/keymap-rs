@@ -1,7 +1,12 @@
 [package]
 name = "keymap_parser"
+description = "A Rust library to parse declarative key mapping configurations with support for sequences, key groups, and multiple formats like YAML and TOML."
 version = "1.0.0-rc"
-edition = "2021"
+authors.workspace = true
+documentation.workspace = true
+repository.workspace = true
+license.workspace = true
+edition.workspace = true
 
 [dependencies]
 serde = { version = "1.0.219", features = ["derive"] }
