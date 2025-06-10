@@ -1,7 +1,7 @@
 [package]
 name = "keymap_derive"
 description = "A derive macro to generate compile-time validated key mappings for enums, enabling declarative and ergonomic key binding support."
-version = "1.0.0-rc"
+version = "1.0.0-rc.1"
 authors.workspace = true
 documentation.workspace = true
 repository.workspace = true
@@ -12,7 +12,7 @@ edition.workspace = true
 proc-macro = true
 
 [dependencies]
-keymap_parser = { path = "../keymap_parser/" }
+keymap_parser = { path = "../keymap_parser/", version = "1.0.0-rc.1" }
 proc-macro2 = "1.0.95"
 quote = "1.0.40"
 syn = "2.0.101"
