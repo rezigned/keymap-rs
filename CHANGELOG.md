@@ -1,5 +1,20 @@
 # Changelog
 
+## [1.0.0-rc.1](https://github.com/rezigned/keymap-rs/compare/keymap-v1.0.0-rc...keymap-v1.0.0-rc.1) (2025-06-10)
+
+
+### Miscellaneous Chores
+
+* **keymap:** Synchronize crates versions
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * keymap_parser bumped from 1.0.0-rc to 1.0.0-rc.1
+    * keymap_derive bumped from 1.0.0-rc to 1.0.0-rc.1
+
 ## [1.0.0-rc](https://github.com/rezigned/keymap-rs/compare/keymap-v0.4.1...keymap-v1.0.0-rc) (2025-06-10)
 
 
