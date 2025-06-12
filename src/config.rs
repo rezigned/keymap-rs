@@ -53,7 +53,7 @@ use crate::{matcher::Matcher, KeyMap};
 /// // This is auto-implemented by `keymap_derive::KeyMap` proc macro.
 /// impl KeyMapConfig<Action> for Action {
 ///     /// Returns the default key-to-item mappings.
-///     fn keymap_config() -> Vec<(Action, Item)> {
+///     fn keymap_config() -> Config<(Action, Item)> {
 ///         vec![
 ///             (Action::Create, Item::new(vec!["c".into()], "Create an item".into())),
 ///             (Action::Update, Item::new(vec!["u".into()], "Update an item".into())),
@@ -93,6 +93,14 @@ pub trait KeyMapConfig<T> {
     /// assert_eq!(item.description, "Create an item");
     /// ```
     fn keymap_item(&self) -> Item;
+}
+
+pub trait BackendConfig<T> {
+    type Key;
+
+    fn get(&self, key: &Self::Key) -> Option<&T>;
+    fn get_seq(&self, keys: &[Self::Key]) -> Option<&T>;
+    fn get_item(&self, key: &Self::Key) -> Option<(&T, &Item)>;
 }
 
 /// A deserializable configuration structure that maps keys to items.
@@ -515,19 +523,37 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-
     const CONFIG: &str = r#"
         Create = { keys = ["c"], description = "Create a new item" }
         Delete = { keys = ["d", "d e", "@digit"], description = "Delete an item" }
     "#;
 
-    #[derive(Debug, keymap_derive::KeyMap, Deserialize, PartialEq, Eq, Hash)]
+    // #[derive(KeyMap)]
+    #[derive(Debug, Deserialize, PartialEq, Eq, Hash)]
     enum Action {
-        #[key("n")]
+        // #[key("n")]
         Create,
-        #[key("u")]
+        // #[key("u")]
         Update,
         Delete,
+    }
+
+    impl KeyMapConfig<Action> for Action {
+        fn keymap_config() -> Config<Action> {
+            Config::new(vec![
+                (Action::Create, Item::new(vec!["n".into()], "".into())),
+                (Action::Update, Item::new(vec!["u".into()], "".into())),
+                (Action::Delete, Item::new(vec![], "".into())),
+            ])
+        }
+
+        fn keymap_item(&self) -> Item {
+            match self {
+                Action::Create => Item::new(vec!["n".into()], "".into()),
+                Action::Update => Item::new(vec!["u".into()], "".into()),
+                Action::Delete => Item::new(vec![], "".into()),
+            }
+        }
     }
 
     #[test]

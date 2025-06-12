@@ -10,7 +10,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use crossterm_utils::output;
-use keymap::DerivedConfig;
+use keymap::{BackendConfig, DerivedConfig};
 use std::{
     io,
     time::{Duration, Instant},

@@ -2,7 +2,7 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use keymap_parser::{self as parser, Key, Modifier, Node};
 use serde::{de, Deserialize, Deserializer};
 
-use crate::{Config, Error, Item, KeyMap};
+use crate::{config::BackendConfig, Config, Error, Item, KeyMap};
 
 pub fn parse(s: &str) -> Result<KeyEvent, Error> {
     parser::parse(s)
@@ -18,6 +18,14 @@ impl TryFrom<&KeyEvent> for KeyMap {
     }
 }
 
+impl TryFrom<KeyEvent> for KeyMap {
+    type Error = Error;
+
+    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
+        node_from_backend(&value).map(Self)
+    }
+}
+
 impl TryFrom<&KeyMap> for KeyEvent {
     type Error = Error;
 
@@ -26,7 +34,9 @@ impl TryFrom<&KeyMap> for KeyEvent {
     }
 }
 
-impl<T> Config<T> {
+impl<T> BackendConfig<T> for Config<T> {
+    type Key = KeyEvent;
+
     /// Retrieve just the key type `T` (without the `Item`) `KeyEvent`.
     ///
     /// Returns `None` if not found.
@@ -43,11 +53,11 @@ impl<T> Config<T> {
     /// let key = config.get(&KeyEvent::from(KeyCode::Char('c'))).unwrap();
     /// assert_eq!(key, "Create");
     /// ```
-    pub fn get(&self, key: &KeyEvent) -> Option<&T> {
+    fn get(&self, key: &Self::Key) -> Option<&T> {
         self.get_by_keymap(&key.try_into().ok()?)
     }
 
-    pub fn get_seq(&self, keys: &[KeyEvent]) -> Option<&T> {
+    fn get_seq(&self, keys: &[Self::Key]) -> Option<&T> {
         let nodes = keys
             .iter()
             .map(|key| node_from_backend(key).ok())
@@ -56,7 +66,7 @@ impl<T> Config<T> {
         self.get_item_by_keys(&nodes).map(|(t, _)| t)
     }
 
-    pub fn get_item(&self, key: &KeyEvent) -> Option<(&T, &Item)> {
+    fn get_item(&self, key: &Self::Key) -> Option<(&T, &Item)> {
         self.get_item_by_keymap(&key.try_into().ok()?)
     }
 }

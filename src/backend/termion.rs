@@ -3,7 +3,7 @@ use termion::event::Key as KeyEvent;
 
 use keymap_parser::{self as parser, Key, Modifier, Node};
 
-use crate::{Config, Error, Item, KeyMap};
+use crate::{BackendConfig, Config, Error, Item, KeyMap};
 
 pub fn parse(s: &str) -> Result<KeyEvent, Error> {
     parser::parse(s)
@@ -11,7 +11,9 @@ pub fn parse(s: &str) -> Result<KeyEvent, Error> {
         .and_then(backend_from_node)
 }
 
-impl<T> Config<T> {
+impl<T> BackendConfig<T> for Config<T> {
+    type Key = KeyEvent;
+
     /// Retrieve just the key type `T` (without the `Item`) by a `KeyEvent`.
     ///
     /// Returns `None` if not found.
@@ -28,12 +30,21 @@ impl<T> Config<T> {
     /// let key = config.get(&KeyEvent::Char('c')).unwrap();
     /// assert_eq!(key, "Create");
     /// ```
-    pub fn get(&self, key: &KeyEvent) -> Option<&T> {
+    fn get(&self, key: &Self::Key) -> Option<&T> {
         self.get_by_keymap(&key.try_into().ok()?)
     }
 
-    pub fn get_item(&self, key: &KeyEvent) -> Option<(&T, &Item)> {
+    fn get_item(&self, key: &Self::Key) -> Option<(&T, &Item)> {
         self.get_item_by_keymap(&key.try_into().ok()?)
+    }
+
+    fn get_seq(&self, keys: &[Self::Key]) -> Option<&T> {
+        let nodes = keys
+            .iter()
+            .map(|key| node_from_backend(key).ok())
+            .collect::<Option<Vec<_>>>()?;
+
+        self.get_item_by_keys(&nodes).map(|(t, _)| t)
     }
 }
 
