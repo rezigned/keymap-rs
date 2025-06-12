@@ -6,7 +6,7 @@ mod termion_utils;
 use std::io::{stdin, Write};
 
 use config::{parse_config, Action};
-use keymap::KeyMap;
+use keymap::ToKeyMap;
 use termion::event::Event;
 use termion::input::TermRead;
 use termion_utils::{output, print, Result};
@@ -20,7 +20,7 @@ fn main() -> Result {
         if let Event::Key(key) = event? {
             let mut send = |s: &str| print(&mut stdout, s);
 
-            match bindings.0.get_key_value(&KeyMap::try_from(&key).unwrap()) {
+            match bindings.0.get_key_value(&key.to_keymap().unwrap()) {
                 Some((key, action)) => {
                     if *action == Action::Quit {
                         break;

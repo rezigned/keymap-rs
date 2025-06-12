@@ -12,7 +12,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use crossterm_utils::output;
-use keymap::KeyMap;
+use keymap::ToKeyMap;
 
 fn main() -> io::Result<()> {
     enable_raw_mode()?;
@@ -24,7 +24,7 @@ fn main() -> io::Result<()> {
         let event = read()?;
 
         if let Event::Key(key) = event {
-            if let Some((_, action)) = config.0.get_key_value(&KeyMap::try_from(&key).unwrap()) {
+            if let Some((_, action)) = config.0.get_key_value(&key.to_keymap().unwrap()) {
                 match action {
                     Action::Up => send("Up!")?,
                     Action::Down => send("Down!")?,

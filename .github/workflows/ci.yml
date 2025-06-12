@@ -2,20 +2,53 @@ name: CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  test-backends:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        backend:
+          - crossterm
+          - termion
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --no-default-features --features "derive ${{ matrix.backend }}" --verbose
+
+  test-wasm-backend:
+    # TODO: This takes too long to run. Might enable it again later.
+    if: false
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Build
-      run: cargo build --verbose
-    - name: Run tests
-      run: cargo test --workspace --verbose
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Install wasm-pack
+        run: cargo install wasm-pack
+
+      - name: Run wasm tests
+        run: wasm-pack test --headless --chrome --features wasm --no-default-features
+
+  test-workspace:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests
+        run: cargo test --workspace --verbose

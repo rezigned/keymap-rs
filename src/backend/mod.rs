@@ -1,12 +1,9 @@
 //! # Backends
 #[cfg(feature = "crossterm")]
-mod crossterm;
-
-#[cfg(feature = "crossterm")]
-pub use self::crossterm::parse;
+pub mod crossterm;
 
 #[cfg(feature = "termion")]
-mod termion;
+pub mod termion;
 
-#[cfg(feature = "termion")]
-pub use self::termion::parse;
+#[cfg(feature = "wasm")]
+pub mod wasm;

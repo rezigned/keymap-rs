@@ -38,7 +38,7 @@ mod tests {
         ]
         .map(|(action, input)| {
             let key = keymap_parser::parse_seq(input).unwrap();
-            assert_eq!(&action, config.get_item_by_keys(&key).unwrap().0);
+            assert_eq!(&action, config.get_item_by_keymaps(&key).unwrap().0);
         });
     }
 
@@ -52,7 +52,7 @@ mod tests {
         ]
         .map(|(action, input)| {
             let key = keymap_parser::parse_seq(input).unwrap();
-            assert_eq!(&action, config.get_item_by_keys(&key).unwrap().0);
+            assert_eq!(&action, config.get_item_by_keymaps(&key).unwrap().0);
         });
     }
 

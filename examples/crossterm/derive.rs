@@ -10,7 +10,7 @@ use crossterm::{
     terminal::{disable_raw_mode, enable_raw_mode},
 };
 use crossterm_utils::output;
-use keymap::{KeyMapConfig};
+use keymap::KeyMapConfig;
 use std::io;
 
 fn main() -> io::Result<()> {

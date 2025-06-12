@@ -1,6 +1,6 @@
 # keymap-rs
 
-**keymap-rs** is a lightweight and extensible key mapping library for Rust applications. It supports parsing key mappings from configuration files and mapping them to actions based on input events from backends like [`crossterm`](https://crates.io/crates/crossterm), [`termion`](https://docs.rs/termion/latest/termion/), `wasm` (via `web_sys`), and others.
+**keymap-rs** is a lightweight and extensible key mapping library for Rust applications. It supports parsing key mappings from configuration files and mapping them to actions based on input events from backends like [`crossterm`](https://crates.io/crates/crossterm), [`termion`](https://docs.rs/termion/latest/termion/), `wasm`, and others.
 
 ---
 
@@ -15,7 +15,7 @@
   * `@alnum` – alphanumeric
   * `@any` – match any key
 * 🧬 **Derive-based config parser** via `keymap_derive`
-* 🌐 Backend-agnostic (works with `crossterm`, `termion`, `web_sys`, etc.)
+* 🌐 Backend-agnostic (works with `crossterm`, `termion`, `wasm`, etc.)
 * 🪶 Lightweight and extensible
 
 ---
@@ -24,21 +24,31 @@
 
 Run the following command:
 
-> \[!NOTE]
-> By default, this installs with `crossterm` as the default backend. You can enable a different backend by specifying the feature flag:
->
-> ```sh
-> cargo add keymap --features termion  # or web_sys, etc.
-> ```
-
 ```sh
-cargo add keymap
+cargo add keymap --feature {crossterm | termion | wasm}
 ```
 
 ---
 
 ## 🚀 Example
 
+### Parsing keys
+
+Parse an input key string into a `KeyMap`
+```rust
+assert_eq("ctrl-l".parse::<KeyMap>(), KeyMap::new(Modifier::Ctrl, Key::Char('l'))
+
+// Same as above
+assert_eq(parser::parse("ctrl-l"), KeyMap::new(Modifier::Ctrl, Key::Char('l'))
+```
+
+Parse an input key string into the backend's key event.
+```rust
+assert_eq!(
+    keymap::backend::crossterm::parse("ctrl-l"),
+    crossterm::event::KeyEvent::new(KeyCode::Char('l'), KeyModifiers::CONTROL)
+)
+```
 ### Using `keymap_derive`
 
 Define your actions and key mappings:

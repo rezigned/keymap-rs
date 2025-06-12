@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&family=Press+Start+2P&family=Silkscreen:wght@400;700&display=swap');
+
+@font-face {
+  font-family: 'PixelOperatorMonoRegular';
+  src: url('public/fonts/PixelOperatorMonoRegular.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+body {
+  min-height: 100vh;
+  margin: 0;
+  padding-top: 1.5rem;
+  background-color: #f0f4f8;
+  font-family: 'Silkscreen', cursive;
+  color: #334e68;
+}
+body > * {
+  max-width: 600px;
+  min-width: 400px;
+  margin: 0 auto 2rem;
+}
+h1, h2 {
+  font-family: 'Press Start 2P', cursive;
+  text-align: center;
+}
+h1 {
+  color: #243b53;
+}
+h3 {
+  margin-bottom: 1.5rem;
+}
+h4 {
+  margin-bottom: 1.2rem;
+}
+ul {
+  line-height: 1.5em;
+}
+code, p {
+  font-family: 'Pixel Operator Mono', monospace;
+  font-family: 'Pixelon', monospace;
+  font-family: 'PixelOperatorMonoRegular', monospace;
+}
+.text, p {
+  color: #5a7184; /* Medium blue-gray */
+}
+p {
+  font-size: 1.2em;
+  margin: 0 auto 1em;
+  line-height: 1.3em;
+}
+p code {
+  color: #f01973;
+}
+code {
+  line-height: 1.2em;
+}
+.game-container {
+  position: relative;
+  min-width: 400px;
+  max-width: 600px;
+  border: 4px solid #9fb3c8; /* Muted blue-gray border */
+  box-sizing: content-box; /* Include padding and border in the element's total width and height */
+  margin: 0 auto 2rem;
+}
+canvas {
+  background-color: #0c0c1f; /* Dark blue night sky */
+  image-rendering: pixelated; /* Ensure pixel art stays sharp */
+  image-rendering: -moz-crisp-edges;
+  image-rendering: -webkit-crisp-edges;
+  display: block; /* Remove extra space below canvas */
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 600 / 300;
+}
+.socials a {
+  float: right;
+  margin-left: 0.5em;
+}
+#score {
+  margin-top: 1em;
+  font-size: 1.6em;
+  text-align: right;
+}
+#game-over {
+  position: absolute;
+  top: 33%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 3.5em;
+  color: #ef4444; /* Modern red */
+  text-shadow: 2px 2px 0px #dc2626; /* Slightly darker red shadow */
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  display: none;
+  z-index: 10;
+  white-space: nowrap; /* Prevent text wrapping */
+}
+.game-container button {
+  padding: 10px 20px;
+  font-size: 1em;
+  cursor: pointer;
+  color: white;
+  border-radius: 4px;
+  transition: background-color 0.1s ease;
+  font-family: 'Press Start 2P', cursive;
+  position: absolute;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+  display: none;
+}
+#restart-button {
+  top: calc(50% + 20px); /* Position below game over message */
+  border: 2px solid #059669; /* Darker green border */
+  background-color: #10b981; /* Modern green */
+  box-shadow: 2px 2px 0px #059669;
+}
+#restart-button:hover {
+  background-color: #059669;
+}
+#share-button {
+  font-size: 0.7em;
+  top: calc(50% + 80px);
+  border: 2px solid #ddd;
+  background-color: #0E0E0E;
+  box-shadow: 2px 2px 0px #9b9b9b;
+}
+#share-button:hover {
+  background-color: #282828;
+}
+.rainbow {
+  font-family: 'Press Start 2P', cursive;
+  animation: rainbowColors 4s linear infinite;
+  opacity: 1;
+  text-decoration: none;
+}
+@keyframes rainbowColors {
+  0%  { color: #ff33aa; }
+  40%   { color: #ff0000; }
+  80%  { color: #ff7f00; }
+  100%  { color: #ff33aa; }
+}
