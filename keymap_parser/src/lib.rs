@@ -13,7 +13,7 @@
 //! let input = "ctrl-alt-f";
 //! let node = parse(input).unwrap();
 //!
-//! assert_eq!(node, Node { modifiers: Modifier::Ctrl | Modifier::Alt, key: Key::Char('f') });
+//! assert_eq!(node, Node::new(Modifier::Ctrl | Modifier::Alt, Key::Char('f')));
 //! ```
 //! Parse a sequence of keymap strings into a `Vec<Node>`:
 //! ```

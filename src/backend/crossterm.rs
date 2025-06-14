@@ -1,6 +1,6 @@
 //! Key event parsing and cnnversion for the `crossterm` backend.
 //!
-//! This module bridges `crossterm::event::KeyEvent` with a generic internal
+//! This module bridges `crossterm::event::KeyEvent` with a backend-agnostic
 //! representation (`KeyMap`) used for keybinding configuration and matching.
 //! It enables parsing human-readable key definitions and converting between
 //! representations suitable for UI and configuration layers.
@@ -80,10 +80,7 @@ impl ToKeyMap for KeyEvent {
             }
         };
 
-        Ok(Node {
-            key,
-            modifiers: modifiers_from_backend(modifiers),
-        })
+        Ok(Node::new(modifiers_from_backend(modifiers), key))
     }
 }
 
@@ -113,9 +110,11 @@ impl FromKeyMap for KeyEvent {
             Key::Tab => KeyCode::Tab,
             Key::Space => KeyCode::Char(' '),
             Key::Up => KeyCode::Up,
-            Key::Group(group) => return Err(Error::UnsupportedKey(format!(
+            Key::Group(group) => {
+                return Err(Error::UnsupportedKey(format!(
                 "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
-            ))),
+            )))
+            }
         };
 
         Ok(KeyEvent::new(key, modifiers_from_node(keymap.modifiers)))

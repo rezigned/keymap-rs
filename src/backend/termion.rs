@@ -80,7 +80,7 @@ impl ToKeyMap for KeyEvent {
             }
         };
 
-        Ok(Node { key, modifiers })
+        Ok(Node::new(modifiers, key))
     }
 }
 

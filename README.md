@@ -24,19 +24,17 @@
 
 Run the following command:
 
-> \[!NOTE]
-> By default, this installs with `crossterm` as the default backend. You can enable a different backend by specifying the feature flag:
->
-> ```sh
-> cargo add keymap --features termion  # or web_sys, etc.
-> ```
-
 ```sh
 cargo add keymap
 ```
 
 ---
 
+## Parsing keys
+
+```rust
+matches!(keymap::backend::crossterm::parse("x"), crossterm::event::KeyEvent{ code: KeyCode::Char('x'), .. })
+```
 ## 🚀 Example
 
 ### Using `keymap_derive`
