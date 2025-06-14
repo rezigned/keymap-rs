@@ -25,7 +25,7 @@
 //! trait-based extension points.
 //!
 //! See [`Config`], [`DerivedConfig`], and [`Item`] for more details.
-use keymap_parser::{parse_seq, Node};
+use keymap_parser::parse_seq;
 use serde::{
     de::{MapAccess, Visitor},
     Deserialize, Deserializer,
@@ -108,8 +108,8 @@ pub trait BackendConfig<T> {
 /// `Config<T>` maintains:
 /// 1. `items`: a `Vec<(T, Item)>` of all associations from a key type `T`
 ///    to its corresponding `Item`.
-/// 2. `keys`: an internal reverse-lookup vector of `(Vec<Node>, index)`
-///    where each `Vec<Node>` is a parsed key sequence and `index` points
+/// 2. `keys`: an internal reverse-lookup vector of `(Vec<KeyMap>, index)`
+///    where each `Vec<KeyMap>` is a parsed key sequence and `index` points
 ///    back into the `items` vector. This allows fast resolution from a
 ///    parsed sequence of key nodes to the stored `(T, Item)` pair.
 ///
@@ -145,10 +145,10 @@ pub struct Config<T> {
     /// A list of `(T, Item)` pairs as provided by deserialization.
     pub items: Vec<(T, Item)>,
 
-    /// A reverse-lookup structure: each element is `(Vec<Node>, usize)`, where
-    /// `Vec<Node>` is the parsed key sequence and `usize` is an index into
+    /// A reverse-lookup structure: each element is `(Vec<KeyMap>, usize)`, where
+    /// `Vec<KeyMap>` is the parsed key sequence and `usize` is an index into
     /// the `items` vector. This allows efficient lookup of `(T, Item)` by
-    /// matching against a parsed `Node` sequence.
+    /// matching against a parsed `KeyMap` sequence.
     matcher: Matcher<usize>,
 }
 
@@ -225,7 +225,7 @@ impl<T> Deref for DerivedConfig<T> {
 
 /// Represents a single mapping entry: a list of key strings and a human-
 /// readable description. During deserialization, each string in `keys`
-/// will be parsed into a `Vec<Node>` internally to build the reverse lookup.
+/// will be parsed into a `Vec<KeyMap>` internally to build the reverse lookup.
 ///
 /// # Fields
 ///
@@ -275,7 +275,7 @@ impl<T> Config<T> {
     //
     // }
 
-    /// Lookup an `(T, Item)` pair by a parsed `Node`, returning a
+    /// Lookup an `(T, Item)` pair by a parsed `KeyMap`, returning a
     /// reference to the key type `T` and the associated `Item` if found.
     ///
     /// This is a convenience alias for `get_item_by_key`.
@@ -294,29 +294,42 @@ impl<T> Config<T> {
     ///     println!("Found key: {:?}, desc: {}", key, item.description);
     /// }
     /// ```
-    pub fn get_item_by_node(&self, node: &Node) -> Option<(&T, &Item)> {
-        self.get_item_by_key(node)
-    }
-
-    /// Lookup by a full [`KeyMap`], which is a simple wrapper around `Node`.
-    pub fn get_item_by_keymap(&self, keymap: &KeyMap) -> Option<(&T, &Item)> {
-        self.get_item_by_node(&keymap.0)
+    pub fn get_item_by_keymap(&self, node: &KeyMap) -> Option<(&T, &Item)> {
+        self.get_item_by_keymaps(std::slice::from_ref(node))
     }
 
     /// Retrieve just the key type `T` (without the `Item`) by a parsed
-    /// `Node`. Returns `None` if not found.
-    pub fn get_by_node(&self, node: &Node) -> Option<&T> {
-        self.get_item_by_node(node).map(|(t, _)| t)
+    /// `KeyMap`. Returns `None` if not found.
+    pub fn get_by_keymap(&self, node: &KeyMap) -> Option<&T> {
+        self.get_item_by_keymap(node).map(|(t, _)| t)
     }
 
-    /// Retrieve just the key type `T` by a full [`KeyMap`].
-    pub fn get_by_keymap(&self, keymap: &KeyMap) -> Option<&T> {
-        self.get_item_by_node(&keymap.0).map(|(t, _)| t)
+    /// Lookup an `(T, Item)` pair by an entire slice of parsed [`KeyMap`]s.
+    /// This performs an exact match against one of the stored `Vec<KeyMap>`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use keymap::{Config, Item};
+    /// # use keymap_parser::parse_seq;
+    /// let config: Config<String> = toml::from_str(r#"
+    ///     Create = { keys = ["x y"], description = "Create a new item" }
+    /// "#).unwrap();
+    ///
+    /// let nodes = parse_seq("x y").unwrap();
+    /// if let Some((key, item)) = config.get_item_by_keys(&nodes) {
+    ///     println!("Exact match for {:?}: {:?}", nodes, item);
+    /// }
+    /// ```
+    pub fn get_item_by_keymaps(&self, keys: &[KeyMap]) -> Option<(&T, &Item)> {
+        self.matcher
+            .get(keys)
+            .map(|i| (&self.items[*i].0, &self.items[*i].1))
     }
 
     /// Lookup an `(T, Item)` by a raw string. This will attempt to parse the
     /// string through `parse_seq` and then perform a lookup on the resulting
-    /// slice of `Node`s.
+    /// slice of `KeyMap`s.
     ///
     /// Returns `None` if parsing fails or if no matching entry exists.
     ///
@@ -333,40 +346,9 @@ impl<T> Config<T> {
     /// }
     /// ```
     pub fn get_item_by_key_str(&self, key: &str) -> Option<(&T, &Item)> {
-        self.get_item_by_keys(parse_seq(key).ok()?.as_slice())
+        self.get_item_by_keymaps(parse_seq(key).ok()?.as_slice())
     }
 
-    /// Lookup an `(T, Item)` pair by a single parsed [`Node`]. Return the associated
-    /// `(T, Item)` if the element of `Vec<Node>` matches `key`.
-    ///
-    /// This method does not clone the stored keys; it only compares the first
-    /// element of each stored `Vec<Node>` to the provided `Node`.
-    pub fn get_item_by_key(&self, key: &Node) -> Option<(&T, &Item)> {
-        self.get_item_by_keys(std::slice::from_ref(key))
-    }
-
-    /// Lookup an `(T, Item)` pair by an entire slice of parsed [`Node`]s.
-    /// This performs an exact match against one of the stored `Vec<Node>`.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use keymap::{Config, Item};
-    /// # use keymap_parser::parse_seq;
-    /// let config: Config<String> = toml::from_str(r#"
-    ///     Create = { keys = ["x y"], description = "Create a new item" }
-    /// "#).unwrap();
-    ///
-    /// let nodes = parse_seq("x y").unwrap();
-    /// if let Some((key, item)) = config.get_item_by_keys(&nodes) {
-    ///     println!("Exact match for {:?}: {:?}", nodes, item);
-    /// }
-    /// ```
-    pub fn get_item_by_keys(&self, keys: &[Node]) -> Option<(&T, &Item)> {
-        self.matcher
-            .get(keys)
-            .map(|i| (&self.items[*i].0, &self.items[*i].1))
-    }
 }
 
 impl Item {
@@ -393,7 +375,7 @@ impl Item {
 /// we build:
 ///
 /// 1. `items`: a `Vec<(T, Item)>` in the insertion order.
-/// 2. `keys`: for every string in `Item.keys`, parse it into a `Vec<Node>` and
+/// 2. `keys`: for every string in `Item.keys`, parse it into a `Vec<KeyMap>` and
 ///    store `(parsed_nodes, index)` so we can do reverse lookups quickly without
 ///    cloning `T`.
 ///
@@ -566,7 +548,7 @@ mod tests {
         assert_eq!(item.description, "Create a new item");
 
         // Reverse lookup by parsed sequence ["d", "e"]
-        let (action, item) = config.get_item_by_keys(&parse_seq("d e").unwrap()).unwrap();
+        let (action, item) = config.get_item_by_keymaps(&parse_seq("d e").unwrap()).unwrap();
         assert_eq!(action, "Delete");
         assert_eq!(item.description, "Delete an item");
 

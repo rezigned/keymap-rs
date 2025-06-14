@@ -1,36 +1,124 @@
+//! Key event parsing and cnnversion for the `crossterm` backend.
+//!
+//! This module bridges `crossterm::event::KeyEvent` with a generic internal
+//! representation (`KeyMap`) used for keybinding configuration and matching.
+//! It enables parsing human-readable key definitions and converting between
+//! representations suitable for UI and configuration layers.
+//!
+//! # Key Features
+//! - `parse`: Parses a string key representation (e.g., "Ctrl+S") into a `KeyEvent`.
+//! - Implements `IntoKeyMap`, `ToKeyMap`, and `FromKeyMap` for `KeyEvent`.
+//! - Converts between `KeyEvent` (from crossterm) and internal `KeyMap` format.
+//!
+//! # Limitations
+//! - Some `KeyCode` variants are not supported and will return an error.
+//! - Key groups (e.g., `@any`) are not reversible to `KeyEvent` due to the loss of specificity.
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use keymap_parser::{self as parser, Key, Modifier, Node};
-use serde::{de, Deserialize, Deserializer};
 
-use crate::{config::BackendConfig, Config, Error, Item, KeyMap};
+use crate::{
+    config::BackendConfig,
+    keymap::{FromKeyMap, IntoKeyMap, KeyMap, ToKeyMap},
+    Config, Error, Item,
+};
 
+/// Parses a string keybinding (e.g., `"ctrl-c"`, `"f1"`, `"alt+backspace"`) into a `KeyEvent`.
+///
+/// This uses the `keymap_parser` crate to interpret the string and maps it into a `KeyEvent`.
+/// Returns an error if parsing fails or the resulting representation cannot be converted.
+///
+/// # Errors
+/// - Returns `Error::Parse` if the string cannot be parsed.
+/// - Returns `Error::UnsupportedKey` if the key or modifiers are unsupported.
 pub fn parse(s: &str) -> Result<KeyEvent, Error> {
     parser::parse(s)
         .map_err(Error::Parse)
-        .and_then(|node| backend_from_node(&node))
+        .and_then(KeyEvent::from_keymap)
 }
 
-impl TryFrom<&KeyEvent> for KeyMap {
-    type Error = Error;
-
-    fn try_from(value: &KeyEvent) -> Result<Self, Self::Error> {
-        node_from_backend(value).map(Self)
+impl IntoKeyMap for KeyEvent {
+    /// Converts a `KeyEvent` into a `KeyMap`.
+    ///
+    /// Internally delegates to `ToKeyMap`.
+    fn into_keymap(self) -> Result<KeyMap, Error> {
+        self.to_keymap()
     }
 }
 
-impl TryFrom<KeyEvent> for KeyMap {
-    type Error = Error;
+impl ToKeyMap for KeyEvent {
+    /// Converts a `KeyEvent` to the `KeyMap` format.
+    ///
+    /// # Errors
+    /// - Returns `Error::UnsupportedKey` if the `KeyEvent` variant is not supported for conversion.
+    fn to_keymap(&self) -> Result<KeyMap, Error> {
+        let KeyEvent {
+            code, modifiers, ..
+        } = self;
+        let key = match code {
+            KeyCode::BackTab => Key::BackTab,
+            KeyCode::Backspace => Key::Backspace,
+            KeyCode::Char(' ') => Key::Space,
+            KeyCode::Char(c) => Key::Char(*c),
+            KeyCode::Delete => Key::Delete,
+            KeyCode::Down => Key::Down,
+            KeyCode::End => Key::End,
+            KeyCode::Enter => Key::Enter,
+            KeyCode::Esc => Key::Esc,
+            KeyCode::F(n) => Key::F(*n),
+            KeyCode::Home => Key::Home,
+            KeyCode::Insert => Key::Insert,
+            KeyCode::Left => Key::Left,
+            KeyCode::PageDown => Key::PageDown,
+            KeyCode::PageUp => Key::PageUp,
+            KeyCode::Right => Key::Right,
+            KeyCode::Tab => Key::Tab,
+            KeyCode::Up => Key::Up,
+            code => {
+                return Err(Error::UnsupportedKey(format!(
+                    "Unsupported KeyEvent {code:?}"
+                )))
+            }
+        };
 
-    fn try_from(value: KeyEvent) -> Result<Self, Self::Error> {
-        node_from_backend(&value).map(Self)
+        Ok(Node {
+            key,
+            modifiers: modifiers_from_backend(modifiers),
+        })
     }
 }
 
-impl TryFrom<&KeyMap> for KeyEvent {
-    type Error = Error;
+impl FromKeyMap for KeyEvent {
+    /// Converts a `KeyMap` back into a `KeyEvent`.
+    ///
+    /// # Errors
+    /// - Returns `Error::UnsupportedKey` if the `KeyMap` contains a `Group`, which cannot be
+    ///   reversed into a concrete `KeyEvent`.
+    fn from_keymap(keymap: KeyMap) -> Result<Self, Error> {
+        let key = match keymap.key {
+            Key::BackTab => KeyCode::BackTab,
+            Key::Backspace => KeyCode::Backspace,
+            Key::Char(c) => KeyCode::Char(c),
+            Key::Delete => KeyCode::Delete,
+            Key::Down => KeyCode::Down,
+            Key::End => KeyCode::End,
+            Key::Enter => KeyCode::Enter,
+            Key::Esc => KeyCode::Esc,
+            Key::F(n) => KeyCode::F(n),
+            Key::Home => KeyCode::Home,
+            Key::Insert => KeyCode::Insert,
+            Key::Left => KeyCode::Left,
+            Key::PageDown => KeyCode::PageDown,
+            Key::PageUp => KeyCode::PageUp,
+            Key::Right => KeyCode::Right,
+            Key::Tab => KeyCode::Tab,
+            Key::Space => KeyCode::Char(' '),
+            Key::Up => KeyCode::Up,
+            Key::Group(group) => return Err(Error::UnsupportedKey(format!(
+                "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
+            ))),
+        };
 
-    fn try_from(value: &KeyMap) -> Result<Self, Self::Error> {
-        backend_from_node(&value.0)
+        Ok(KeyEvent::new(key, modifiers_from_node(keymap.modifiers)))
     }
 }
 
@@ -54,91 +142,24 @@ impl<T> BackendConfig<T> for Config<T> {
     /// assert_eq!(key, "Create");
     /// ```
     fn get(&self, key: &Self::Key) -> Option<&T> {
-        self.get_by_keymap(&key.try_into().ok()?)
+        self.get_by_keymap(&key.to_keymap().ok()?)
     }
 
     fn get_seq(&self, keys: &[Self::Key]) -> Option<&T> {
         let nodes = keys
             .iter()
-            .map(|key| node_from_backend(key).ok())
+            .map(|key| key.to_keymap().ok())
             .collect::<Option<Vec<_>>>()?;
 
-        self.get_item_by_keys(&nodes).map(|(t, _)| t)
+        self.get_item_by_keymaps(&nodes).map(|(t, _)| t)
     }
 
     fn get_item(&self, key: &Self::Key) -> Option<(&T, &Item)> {
-        self.get_item_by_keymap(&key.try_into().ok()?)
+        self.get_item_by_keymap(&key.to_keymap().ok()?)
     }
 }
 
-fn node_from_backend(value: &KeyEvent) -> Result<Node, Error> {
-    let KeyEvent {
-        code, modifiers, ..
-    } = value;
-    {
-        let key = match code {
-            KeyCode::BackTab => Key::BackTab,
-            KeyCode::Backspace => Key::Backspace,
-            KeyCode::Char(' ') => Key::Space,
-            KeyCode::Char(c) => Key::Char(*c),
-            KeyCode::Delete => Key::Delete,
-            KeyCode::Down => Key::Down,
-            KeyCode::End => Key::End,
-            KeyCode::Enter => Key::Enter,
-            KeyCode::Esc => Key::Esc,
-            KeyCode::F(n) => Key::F(*n),
-            KeyCode::Home => Key::Home,
-            KeyCode::Insert => Key::Insert,
-            KeyCode::Left => Key::Left,
-            KeyCode::PageDown => Key::PageDown,
-            KeyCode::PageUp => Key::PageUp,
-            KeyCode::Right => Key::Right,
-            KeyCode::Tab => Key::Tab,
-            KeyCode::Up => Key::Up,
-            code => {
-                return Err(Error::UnsupportedKey(format!(
-                    "Unsupport KeyEvent {code:?}"
-                )))
-            }
-        };
-
-        Ok(Node {
-            key,
-            modifiers: modifiers_from_backend(modifiers),
-        })
-    }
-}
-
-fn backend_from_node(node: &Node) -> Result<KeyEvent, Error> {
-    let key = match node.key {
-        Key::BackTab => KeyCode::BackTab,
-        Key::Backspace => KeyCode::Backspace,
-        Key::Char(c) => KeyCode::Char(c),
-        Key::Delete => KeyCode::Delete,
-        Key::Down => KeyCode::Down,
-        Key::End => KeyCode::End,
-        Key::Enter => KeyCode::Enter,
-        Key::Esc => KeyCode::Esc,
-        Key::F(n) => KeyCode::F(n),
-        Key::Home => KeyCode::Home,
-        Key::Insert => KeyCode::Insert,
-        Key::Left => KeyCode::Left,
-        Key::PageDown => KeyCode::PageDown,
-        Key::PageUp => KeyCode::PageUp,
-        Key::Right => KeyCode::Right,
-        Key::Tab => KeyCode::Tab,
-        Key::Space => KeyCode::Char(' '),
-        Key::Up => KeyCode::Up,
-        Key::Group(group) => {
-            return Err(Error::UnsupportedKey(format!(
-                "Group {group:?} not supported. There's no way to map char group back to KeyEvent"
-            )))
-        }
-    };
-
-    Ok(KeyEvent::new(key, modifiers_from_node(node.modifiers)))
-}
-
+/// Static mapping between `crossterm` modifiers and internal `keymap_parser::Modifier`s.
 const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
     (KeyModifiers::ALT, Modifier::Alt),
     (KeyModifiers::CONTROL, Modifier::Ctrl),
@@ -146,29 +167,19 @@ const MODIFIERS: [(KeyModifiers, parser::Modifier); 4] = [
     (KeyModifiers::SHIFT, Modifier::Shift),
 ];
 
+/// Converts a `KeyModifiers` bitflag into a `parser::Modifiers` bitfield.
 fn modifiers_from_backend(value: &KeyModifiers) -> parser::Modifiers {
     MODIFIERS.into_iter().fold(0, |acc, (m1, m2)| {
         acc | if value.contains(m1) { m2 as u8 } else { 0 }
     })
 }
 
+/// Converts a `parser::Modifiers` bitfield into a `KeyModifiers` bitflag.
 fn modifiers_from_node(value: parser::Modifiers) -> KeyModifiers {
     let none = KeyModifiers::NONE;
     MODIFIERS.into_iter().fold(none, |acc, (m1, m2)| {
         acc | if value & (m2 as u8) != 0 { m1 } else { none }
     })
-}
-
-impl<'s> Deserialize<'s> for KeyMap {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'s>,
-    {
-        let s = String::deserialize(deserializer)?;
-        keymap_parser::parse(&s)
-            .map(KeyMap)
-            .map_err(de::Error::custom)
-    }
 }
 
 #[cfg(test)]
@@ -216,7 +227,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(node_from_backend(&key).unwrap(), node);
+            assert_eq!(key.to_keymap().unwrap(), node);
         });
     }
 
@@ -234,7 +245,7 @@ mod tests {
         ]
         .map(|(key, code)| {
             let node = parser::parse(code).unwrap();
-            assert_eq!(backend_from_node(&node).unwrap(), key);
+            assert_eq!(KeyEvent::from_keymap(node).unwrap(), key);
         });
     }
 
@@ -264,11 +275,9 @@ delete = "d"
             KeyEvent::from(KeyCode::Delete),
         ]
         .map(|n| {
-            let (key, _) = result
-                .key
-                .get_key_value(&KeyMap::try_from(&n).unwrap())
-                .unwrap();
-            assert_eq!(key, &KeyMap::try_from(&n).unwrap());
+            let (key, _) = result.key.get_key_value(&n.to_keymap().unwrap()).unwrap();
+
+            assert_eq!(key, &n.to_keymap().unwrap());
         });
     }
 }

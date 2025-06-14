@@ -2,7 +2,7 @@
 
 // Re-exports
 pub use config::{BackendConfig, Config, DerivedConfig, Item, KeyMapConfig};
-pub use keymap::{Error, KeyMap};
+pub use keymap::{Error, FromKeyMap, IntoKeyMap, KeyMap};
 pub use keymap_parser::parser;
 pub use matcher::Matcher;
 
