@@ -149,6 +149,7 @@ pub enum CharGroup {
 }
 
 impl CharGroup {
+    #[must_use]
     pub fn matches(&self, c: char) -> bool {
         match self {
             CharGroup::Digit => c.is_ascii_digit(),
@@ -191,7 +192,7 @@ impl<'s> Deserialize<'s> for Node {
 impl Display for Node {
     /// Formats the node as a human-readable string (e.g., "ctrl-shift-a", "alt-f4").
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for m in MODIFIERS.iter() {
+        for m in &MODIFIERS {
             if self.modifiers & *m as u8 != 0 {
                 write!(f, "{m}{KEY_SEP}").unwrap();
             }

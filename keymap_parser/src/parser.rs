@@ -212,9 +212,8 @@ fn parse_node(parser: &mut Parser) -> Result<Node, ParseError> {
 fn try_parse_modifier(parser: &mut Parser) -> Result<Option<Modifier>, ParseError> {
     parser.try_parse(|p| {
         let name = p.take_while(|ch| ch.is_ascii_alphabetic());
-        let modifier = match name.parse::<Modifier>() {
-            Ok(m) => m,
-            Err(_) => return Ok(None),
+        let Ok(modifier) = name.parse::<Modifier>() else {
+            return Ok(None);
         };
 
         p.take(KEY_SEP)?;
