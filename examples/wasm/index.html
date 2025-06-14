@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Keymap WASM Example</title>
+  </head>
+  <body>
+    <p>Open browser console to see key events. Click here to focus.</p>
+    <script type="module">
+      import init from "./pkg/keymap_wasm_example.js"; // Adjust if your package name is different
+      async function run() {
+        await init();
+      }
+      run();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+[package]
+name = "keymap-wasm-example"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2.84" # Use your project's version
+web-sys = { version = "0.3.64", features = ["KeyboardEvent", "KeyboardEventInit", "Window", "Document", "HtmlElement", "Element", "console"] }
+keymap = { path = "../..", default-features = false, features = ["wasm"] } # Critical change here
+console_error_panic_hook = { version = "0.1.7", optional = true }
+
+[profile.release]
+lto = true
+opt-level = 's'
