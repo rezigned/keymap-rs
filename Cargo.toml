@@ -34,7 +34,7 @@ termion = { version = "4.0", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 
 [features]
-default = ["crossterm", "derive"]
+default = ["termion", "derive"]
 derive = ["dep:keymap_derive"]
 
 [dev-dependencies]

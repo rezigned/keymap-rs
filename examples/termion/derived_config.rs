@@ -4,7 +4,6 @@ mod config_derive;
 mod termion_utils;
 
 use config_derive::Action;
-use keymap::BackendConfig;
 use std::io::{stdin, Write};
 use termion::event::Event;
 use termion::input::TermRead;

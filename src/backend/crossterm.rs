@@ -17,9 +17,8 @@ use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
 use keymap_parser::{self as parser, Key, Modifier, Node};
 
 use crate::{
-    config::BackendConfig,
     keymap::{FromKeyMap, IntoKeyMap, KeyMap, ToKeyMap},
-    Config, Error, Item,
+    Error,
 };
 
 /// Parses a string keybinding (e.g., `"ctrl-c"`, `"f1"`, `"alt+backspace"`) into a `KeyEvent`.
@@ -118,43 +117,6 @@ impl FromKeyMap for KeyEvent {
         };
 
         Ok(KeyEvent::new(key, modifiers_from_node(keymap.modifiers)))
-    }
-}
-
-impl<T> BackendConfig<T> for Config<T> {
-    type Key = KeyEvent;
-
-    /// Retrieve just the key type `T` (without the `Item`) `KeyEvent`.
-    ///
-    /// Returns `None` if not found.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// # use keymap::{Config, Item};
-    /// # use crossterm::event::{KeyCode, KeyEvent};
-    /// let config: Config<String> = toml::from_str(r#"
-    ///     Create = { keys = ["c"], description = "Create a new item" }
-    /// "#).unwrap();
-    ///
-    /// let key = config.get(&KeyEvent::from(KeyCode::Char('c'))).unwrap();
-    /// assert_eq!(key, "Create");
-    /// ```
-    fn get(&self, key: &Self::Key) -> Option<&T> {
-        self.get_by_keymap(&key.to_keymap().ok()?)
-    }
-
-    fn get_seq(&self, keys: &[Self::Key]) -> Option<&T> {
-        let nodes = keys
-            .iter()
-            .map(|key| key.to_keymap().ok())
-            .collect::<Option<Vec<_>>>()?;
-
-        self.get_item_by_keymaps(&nodes).map(|(t, _)| t)
-    }
-
-    fn get_item(&self, key: &Self::Key) -> Option<(&T, &Item)> {
-        self.get_item_by_keymap(&key.to_keymap().ok()?)
     }
 }
 

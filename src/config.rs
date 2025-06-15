@@ -32,7 +32,7 @@ use serde::{
 };
 use std::{fmt, marker::PhantomData, ops::Deref};
 
-use crate::{matcher::Matcher, KeyMap};
+use crate::{keymap::ToKeyMap, matcher::Matcher, KeyMap};
 
 /// A trait for providing a default mapping between keys and items.
 ///
@@ -95,6 +95,7 @@ pub trait KeyMapConfig<T> {
     fn keymap_item(&self) -> Item;
 }
 
+/// TODO! Remove this
 pub trait BackendConfig<T> {
     type Key;
 
@@ -268,12 +269,38 @@ impl<T> Config<T> {
         Self { items, matcher }
     }
 
-    // fn merge(&mut self, items: Vec<(T, Item)>) {
-    //     let mut map: HashMap<T, Item> = self.items.into_iter().collect();
-    //
-    //     self.items.extend(items);
-    //
-    // }
+    /// Retrieve just the key type `T` (without the `Item`) `KeyEvent`.
+    ///
+    /// Returns `None` if not found.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use keymap::{Config, Item};
+    /// # use crossterm::event::{KeyCode, KeyEvent};
+    /// let config: Config<String> = toml::from_str(r#"
+    ///     Create = { keys = ["c"], description = "Create a new item" }
+    /// "#).unwrap();
+    ///
+    /// let key = config.get(&KeyEvent::from(KeyCode::Char('c'))).unwrap();
+    /// assert_eq!(key, "Create");
+    /// ```
+    pub fn get<K: ToKeyMap>(&self, key: &K) -> Option<&T> {
+        self.get_by_keymap(&key.to_keymap().ok()?)
+    }
+
+    pub fn get_item<K: ToKeyMap>(&self, key: &K) -> Option<(&T, &Item)> {
+        self.get_item_by_keymap(&key.to_keymap().ok()?)
+    }
+
+    pub fn get_seq<K: ToKeyMap>(&self, keys: &[K]) -> Option<&T> {
+        let nodes = keys
+            .iter()
+            .map(|key| key.to_keymap().ok())
+            .collect::<Option<Vec<_>>>()?;
+
+        self.get_item_by_keymaps(&nodes).map(|(t, _)| t)
+    }
 
     /// Lookup an `(T, Item)` pair by a parsed `KeyMap`, returning a
     /// reference to the key type `T` and the associated `Item` if found.
@@ -348,7 +375,6 @@ impl<T> Config<T> {
     pub fn get_item_by_key_str(&self, key: &str) -> Option<(&T, &Item)> {
         self.get_item_by_keymaps(parse_seq(key).ok()?.as_slice())
     }
-
 }
 
 impl Item {
@@ -548,7 +574,9 @@ mod tests {
         assert_eq!(item.description, "Create a new item");
 
         // Reverse lookup by parsed sequence ["d", "e"]
-        let (action, item) = config.get_item_by_keymaps(&parse_seq("d e").unwrap()).unwrap();
+        let (action, item) = config
+            .get_item_by_keymaps(&parse_seq("d e").unwrap())
+            .unwrap();
         assert_eq!(action, "Delete");
         assert_eq!(item.description, "Delete an item");
 

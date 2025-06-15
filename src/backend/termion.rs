@@ -24,7 +24,7 @@
 use keymap_parser::{self as parser, Key, Modifier, Node};
 use termion::event::Key as KeyEvent;
 
-use crate::{keymap::ToKeyMap, BackendConfig, Config, Error, FromKeyMap, IntoKeyMap, Item, KeyMap};
+use crate::{keymap::ToKeyMap, Error, FromKeyMap, IntoKeyMap, KeyMap};
 
 /// Parses a string representation of a key into a `KeyEvent`.
 ///
@@ -129,36 +129,6 @@ impl FromKeyMap for KeyEvent {
             }
             _ => Ok(key),
         }
-    }
-}
-
-impl<T> BackendConfig<T> for Config<T> {
-    type Key = KeyEvent;
-
-    /// Retrieves a reference to the mapped value of type `T` associated with the given `KeyEvent`.
-    ///
-    /// Returns `None` if no match is found or the key cannot be converted.
-    fn get(&self, key: &Self::Key) -> Option<&T> {
-        self.get_by_keymap(&key.to_keymap().ok()?)
-    }
-
-    /// Retrieves the mapped value and its associated `Item` for the given `KeyEvent`.
-    ///
-    /// Returns `None` if no match is found or the key cannot be converted.
-    fn get_item(&self, key: &Self::Key) -> Option<(&T, &Item)> {
-        self.get_item_by_keymap(&key.to_keymap().ok()?)
-    }
-
-    /// Resolves a sequence of `KeyEvent`s into the final value of type `T`, if defined.
-    ///
-    /// Returns `None` if any key fails to convert or the sequence is not found.
-    fn get_seq(&self, keys: &[Self::Key]) -> Option<&T> {
-        let nodes = keys
-            .iter()
-            .map(|key| key.to_keymap().ok())
-            .collect::<Option<Vec<_>>>()?;
-
-        self.get_item_by_keymaps(&nodes).map(|(t, _)| t)
     }
 }
 
