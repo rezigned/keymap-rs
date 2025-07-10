@@ -25,12 +25,18 @@ pub struct Node {
     pub modifiers: Modifiers,
     /// The main key (see [`Key`]).
     pub key: Key,
+
+    pub state: Option<State>,
 }
 
 impl Node {
     /// Creates a new `Node` from the given modifiers and key.
     pub fn new(modifiers: Modifiers, key: Key) -> Self {
-        Self { modifiers, key }
+        Self {
+            modifiers,
+            key,
+            state: None,
+        }
     }
 }
 
@@ -39,9 +45,23 @@ impl From<Key> for Node {
     fn from(key: Key) -> Self {
         Self {
             modifiers: Modifier::None as u8,
+            state: None,
             key,
         }
     }
+}
+
+#[derive(Copy, Clone, Debug, Default, Display, Hash, PartialEq, Eq)]
+pub enum State {
+    /// The key is pressed.
+    #[default]
+    Pressed,
+    /// The key is released.
+    Released,
+    /// The key is held down.
+    Held,
+    /// The key is repeated.
+    Repeated,
 }
 
 /// Modifier keys that can be combined with other keys.
@@ -149,6 +169,7 @@ pub enum CharGroup {
 }
 
 impl CharGroup {
+    #[must_use]
     pub fn matches(&self, c: char) -> bool {
         match self {
             CharGroup::Digit => c.is_ascii_digit(),
@@ -191,7 +212,7 @@ impl<'s> Deserialize<'s> for Node {
 impl Display for Node {
     /// Formats the node as a human-readable string (e.g., "ctrl-shift-a", "alt-f4").
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        for m in MODIFIERS.iter() {
+        for m in &MODIFIERS {
             if self.modifiers & *m as u8 != 0 {
                 write!(f, "{m}{KEY_SEP}").unwrap();
             }

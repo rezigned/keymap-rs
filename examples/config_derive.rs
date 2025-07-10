@@ -1,4 +1,7 @@
+#[cfg(feature = "derive")]
 use keymap::{DerivedConfig, Item};
+
+#[cfg(feature = "derive")]
 use serde::Deserialize;
 
 #[cfg(feature = "derive")]
@@ -37,11 +40,13 @@ Up = { keys = ["u", "g g"], description = "Fly!" }
 Quit = { keys = ["@digit"], description = "Quit!" }
 "#;
 
+#[cfg(feature = "derive")]
 #[allow(unused)]
 pub(crate) fn derived_config() -> DerivedConfig<Action> {
     toml::from_str(DERIVED_CONFIG).unwrap()
 }
 
+#[cfg(feature = "derive")]
 #[allow(unused)]
 pub(crate) fn print_config(items: &[(Action, Item)]) {
     println!("--- keymap ---");

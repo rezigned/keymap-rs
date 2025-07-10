@@ -1,4 +1,6 @@
-/target
+**/target
+**/pkg
+**/dist
 Cargo.lock
 .DS_Store
 .vscode

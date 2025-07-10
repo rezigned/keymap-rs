@@ -23,7 +23,7 @@ homepage = "https://github.com/rezigned/keymap-rs"
 repository = "https://github.com/rezigned/keymap-rs"
 documentation = "https://docs.rs/keymap"
 edition = "2021"
-keywords = ["terminal", "input", "event", "config", "keymap", "keybinding"]
+keywords = ["terminal", "input", "event", "config", "keymap", "keybinding", "wasm"]
 license = "MIT"
 
 [dependencies]
@@ -31,14 +31,20 @@ keymap_parser = { path = "./keymap_parser", version = "1.0.0-rc.2" }
 keymap_derive = { path = "./keymap_derive", version = "1.0.0-rc.2", optional = true }
 crossterm = { version = "0.29", optional = true }
 termion = { version = "4.0", optional = true }
+web-sys = { version = "0.3", features = ["KeyboardEvent", "KeyboardEventInit"], optional = true }
+wasm-bindgen = { version = "0.2", optional = true }
 serde = { version = "1.0", features = ["derive"] }
 
 [features]
-default = ["crossterm", "derive"]
+default = ["derive"]
 derive = ["dep:keymap_derive"]
+crossterm = ["dep:crossterm"]
+termion = ["dep:termion"]
+wasm = ["dep:web-sys", "dep:wasm-bindgen"]
 
 [dev-dependencies]
 toml = "0.8"
+wasm-bindgen-test = "0.3"
 
 [[example]]
 name = "crossterm"
@@ -52,6 +58,11 @@ required-features = ["crossterm", "derive"]
 [[example]]
 name = "crossterm_derived_config"
 path = "examples/crossterm/derived_config.rs"
+required-features = ["crossterm", "derive"]
+
+[[example]]
+name = "crossterm_modes"
+path = "examples/crossterm/modes.rs"
 required-features = ["crossterm", "derive"]
 
 [[example]]

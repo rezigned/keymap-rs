@@ -19,6 +19,8 @@
 //!
 //! Each `Node` consists of optional modifier keys followed by a key identifier.
 
+use std::str::FromStr;
+
 use crate::node::{CharGroup, Key, Modifier, Node, KEY_SEP};
 
 type ParserFn<T> = fn(&mut Parser) -> Result<Option<T>, ParseError>;
@@ -212,9 +214,8 @@ fn parse_node(parser: &mut Parser) -> Result<Node, ParseError> {
 fn try_parse_modifier(parser: &mut Parser) -> Result<Option<Modifier>, ParseError> {
     parser.try_parse(|p| {
         let name = p.take_while(|ch| ch.is_ascii_alphabetic());
-        let modifier = match name.parse::<Modifier>() {
-            Ok(m) => m,
-            Err(_) => return Ok(None),
+        let Ok(modifier) = name.parse::<Modifier>() else {
+            return Ok(None);
         };
 
         p.take(KEY_SEP)?;
@@ -321,17 +322,12 @@ pub fn parse_seq(s: &str) -> Result<Vec<Node>, ParseError> {
     str::split_whitespace(s).map(parse).collect()
 }
 
-#[test]
-fn test_parse_seq() {
-    [
-        ("ctrl-b", Ok(vec![parse("ctrl-b").unwrap()])),
-        (
-            "ctrl-b l",
-            Ok(vec![parse("ctrl-b").unwrap(), parse("l").unwrap()]),
-        ),
-        ("ctrl-b -l", Err(parse("-l").unwrap_err())), // Invalid: dangling separator
-    ]
-    .map(|(s, v)| assert_eq!(parse_seq(s), v));
+impl FromStr for Node {
+    type Err = ParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        parse(s)
+    }
 }
 
 #[cfg(test)]
@@ -366,6 +362,19 @@ mod tests {
             let output = parse(input);
             assert_eq!(result, output);
         });
+    }
+
+    #[test]
+    fn test_parse_seq() {
+        [
+            ("ctrl-b", Ok(vec![parse("ctrl-b").unwrap()])),
+            (
+                "ctrl-b l",
+                Ok(vec![parse("ctrl-b").unwrap(), parse("l").unwrap()]),
+            ),
+            ("ctrl-b -l", Err(parse("-l").unwrap_err())), // Invalid: dangling separator
+        ]
+        .map(|(s, v)| assert_eq!(super::parse_seq(s), v));
     }
 
     #[test]
@@ -483,6 +492,20 @@ delete = "d"
         .map(|n| {
             let (key, _) = result.keys.get_key_value(&n).unwrap();
             assert_eq!(key, &n);
+        });
+    }
+
+    #[test]
+    fn test_parse_str() {
+        [
+            (Node::new(0, Key::F(3)), "f3"),
+            (Node::new(0, Key::Delete), "delete"),
+            (Node::new(0, Key::Space), "space"),
+        ]
+        .iter()
+        .for_each(|(expected, input)| {
+            let node = input.parse::<Node>().unwrap();
+            assert_eq!(expected, &node);
         });
     }
 }

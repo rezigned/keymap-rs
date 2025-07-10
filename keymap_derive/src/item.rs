@@ -15,7 +15,7 @@ pub(crate) struct Item<'a> {
     pub description: String,
 }
 
-pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<Item>, syn::Error> {
+pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<Item<'_>>, syn::Error> {
     // NOTE: All variants are parsed, even those without the #[key(...)] attribute.
     // This allows the deserializer to override keys and descriptions for variants that don't define them explicitly.
     variants

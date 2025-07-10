@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta property="og:title" content="keymap-rs + WASM (Nyan Jump!)" />
+    <meta property="og:type" content="object" />
+    <meta property="og:url" content="https://rezigned.com/keymap-rs" />
+    <meta property="og:image" content="https://rezigned.github.io/keymap-rs/public/preview.png" />
+    <title>keymap-rs + WASM (Nyan Jump!)</title>
+
+    <link data-trunk rel="css" href="index.css" />
+    <link data-trunk rel="copy-dir" href="public" />
+
+    <link rel="stylesheet" href="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/styles/tomorrow-night-blue.min.css">
+  </head>
+  <body>
+    <div class="socials">
+      <a class="github-forks" href="https://github.com/rezigned/keymap-rs" target="_blank"><img src="https://img.shields.io/github/forks/rezigned/keymap-rs?style=social" alt="GitHub stars" /></a>
+      <a class="github-stars" href="https://github.com/rezigned/keymap-rs" target="_blank"><img src="https://img.shields.io/github/stars/rezigned/keymap-rs?style=social" alt="GitHub stars" /></a>
+    </div>
+    <h1>
+      <a href="https://github.com/rezigned/keymap-rs" target="_blank" class="rainbow">keymap-rs</a>
+    </h1>
+    <p>
+      A Rust library for parsing key sequences from text or configuration files (<code>TOML</code>, <code>YAML</code>, etc.)
+      and mapping them to actions based on keyboard input from backends like
+      <code>crossterm</code>, <code>termion</code>, <code>wasm</code>, and others.
+    </p>
+    <h3>DEMO: Nyan Jump! (WASM Edition)</h3>
+    <div class="game-container">
+      <canvas id="game-canvas" width="100%"></canvas>
+      <div id="game-over">GAME OVER!</div>
+      <button id="restart-button">Restart</button>
+      <button id="share-button">Share on X</button>
+    </div>
+    <h4>EXAMPLE: Derive Macro</h4>
+    <p>
+      Define an enum and automatically derive key bindings using the <code>#[derive(KeyMap)]</code> macro.
+    </p>
+    <pre><code class="language-rust">#[derive(keymap::KeyMap, Deserialize, Hash, PartialEq, Eq)]
+pub enum Action {
+  /// Jump over obstacles
+  #[key("space")]
+  Jump,
+
+  /// Move leftward
+  #[key("left")]
+  Left,
+
+  /// Move rightward
+  #[key("right")]
+  Right,
+
+  /// Pause
+  #[key("p")]
+  Pause,
+
+  /// Restart
+  #[key("q", "esc")]
+  Quit,
+}</code></pre>
+    <h4>EXAMPLE: Key Override</h4>
+    <p>
+      Customize or extend key bindings through configuration files without changing the source code.
+    </p>
+    <pre><code class="language-yaml"># Now both 'space' and the 'up' arrow can be used to jump
+Jump = { keys = ["space", "up"], description = "Jump Jump!" }
+</code></pre>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js" defer></script>
+    <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/languages/rust.min.js" defer></script>
+    <script type="module" defer>
+      // Initialize syntax highlighting
+      hljs.highlightAll();
+    </script>
+  </body>
+</html>
