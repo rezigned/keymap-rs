@@ -25,6 +25,16 @@
 
 ---
 
+## 🕹️ Demo
+
+See `keymap-rs` in action with the [WASM example](https://rezigned.com/keymap-rs/):
+
+<p align="center">
+  <img src="./examples/wasm/public/preview.png" alt="keymap-rs WASM Demo" width="700">
+</p>
+
+---
+
 ## 📦 Installation
 
 Add `keymap` to your `Cargo.toml`, enabling the feature for your chosen backend:
