@@ -1,3 +1,4 @@
+use keymap::Config;
 #[cfg(feature = "derive")]
 use keymap::{DerivedConfig, Item};
 
@@ -43,6 +44,11 @@ Quit = { keys = ["@digit"], description = "Quit!" }
 #[cfg(feature = "derive")]
 #[allow(unused)]
 pub(crate) fn derived_config() -> DerivedConfig<Action> {
+    toml::from_str(DERIVED_CONFIG).unwrap()
+}
+
+#[allow(unused)]
+pub(crate) fn config() -> Config<Action> {
     toml::from_str(DERIVED_CONFIG).unwrap()
 }
 
