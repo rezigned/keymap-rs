@@ -70,12 +70,12 @@ use crate::{keymap::ToKeyMap, matcher::Matcher, KeyMap};
 /// }
 /// ```
 pub trait KeyMapConfig<T> {
-    /// Returns the default key-to-item mappings.
+    /// Returns the default keymap configuration.
     ///
-    /// This method should return a vector of `(T, Item)` pairs representing
-    /// the default associations between keys and their corresponding items.
-    /// These defaults will be incorporated into a [`Config<T>`]
-    /// and can be overridden by user-supplied configuration when deserializing.
+    /// This method returns a [`Config<T>`] containing the default mappings
+    /// between keys and their associated items. These defaults are used as
+    /// the base configuration and can be overridden by user-supplied settings
+    /// during deserialization.
     fn keymap_config() -> Config<T>;
 
     /// Returns the [`Item`] associated with this particular variant.
@@ -411,7 +411,6 @@ impl Item {
 ///
 /// When deserializing, Serde expects a map whose keys are of type `T` and
 /// whose values are `Item`. For example, with `T = String`:
-
 /// ```toml
 /// Create = { keys = ["c"], description = "Create a new item" }
 /// Delete = { keys = ["d", "d e"], description = "Delete an item" }
