@@ -98,7 +98,7 @@ match config.get(&key) {
 
 ### 2. Using External Configuration
 
-You can also load keymaps from external files (e.g., `config.toml`). This is useful for user-configurable keybindings.
+Keymaps can also be loaded from external files (e.g., `config.toml`). This is useful for user-configurable keybindings.
 
 **Example `config.toml`:**
 
@@ -108,7 +108,7 @@ Jump = { keys = ["j", "up"], description = "Jump with 'j' or up arrow!" }
 Quit = { keys = ["@any"], description = "Quit on any key press." }
 ```
 
-You have two ways to load this configuration:
+This configuration can be loaded in two ways:
 
 #### `Config<T>`: Load from File Only
 
@@ -143,7 +143,7 @@ let config: DerivedConfig<Action> = toml::from_str(config_str).unwrap();
 
 ### 3. Compile-Time Validation
 
-The `keymap_derive` macro validates all key strings at **compile time**, so you get immediate feedback on invalid syntax.
+The `keymap_derive` macro validates all key strings at **compile time**, providing immediate feedback on invalid syntax.
 
 **Invalid Key Example:**
 
@@ -170,7 +170,7 @@ error: Invalid key "enter2": Parse error at position 5: expect end of input, fou
 
 ### 4. Direct Key Parsing
 
-You can also parse key strings directly into a `KeyMap` or a backend-specific key event.
+Key strings can also be parsed directly into a `KeyMap` or a backend-specific key event.
 
 ```rust
 use crossterm::event::{KeyCode, KeyEvent, KeyModifiers};
