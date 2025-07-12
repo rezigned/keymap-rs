@@ -2,7 +2,6 @@
 
 set -euxo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 TARGET_BRANCH="${1:-test-release-please}"
 
 # Note that release-please will run against the remote branch, tags and releases on Github.
