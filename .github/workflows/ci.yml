@@ -5,10 +5,12 @@ on:
     branches: ["main"]
     paths-ignore:
       - '**.md'
+      - '.github/scripts/**'
   pull_request:
     branches: ["main"]
     paths-ignore:
       - '**.md'
+      - '.github/scripts/**'
 
 env:
   CARGO_TERM_COLOR: always
