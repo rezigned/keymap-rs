@@ -61,11 +61,6 @@ path = "examples/crossterm/derived_config.rs"
 required-features = ["crossterm", "derive"]
 
 [[example]]
-name = "crossterm_modes"
-path = "examples/crossterm/modes.rs"
-required-features = ["crossterm", "derive"]
-
-[[example]]
 name = "termion"
 required-features = ["termion"]
 
@@ -78,3 +73,8 @@ required-features = ["termion", "derive"]
 name = "termion_derived_config"
 path = "examples/termion/derived_config.rs"
 required-features = ["termion", "derive"]
+
+[[example]]
+name = "modes"
+path = "examples/modes.rs"
+required-features = ["crossterm", "derive"]
