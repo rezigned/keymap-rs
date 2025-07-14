@@ -47,38 +47,25 @@ fn main() -> std::io::Result<()> {
 
     println!("mode: {mode}\r");
 
-    run(move |key| match mode {
-        "home" => {
-            let Some(Actions::Home(config)) = modes.get(mode) else {
-                return false;
-            };
-
-            match config.get(&key) {
-                Some(action) => match action {
-                    HomeAction::Quit => quit("quit!"),
-                    HomeAction::Edit => {
-                        mode = "edit";
-                        print("enter edit mode!")
-                    }
-                },
-                None => print(&format!("{}", key.code)),
-            }
-        }
-        "edit" => {
-            let Some(Actions::Edit(config)) = modes.get(mode) else {
-                return false;
-            };
-
-            match config.get(&key) {
-                Some(action) => match action {
-                    EditAction::Exit => {
-                        mode = "home";
-                        print("exit edit mode!")
-                    }
-                },
-                None => print(&format!("{}", key.code)),
-            }
-        }
-        _ => unreachable!(),
+    run(move |key| match modes.get(mode).unwrap() {
+        Actions::Home(config) => match config.get(&key) {
+            Some(action) => match action {
+                HomeAction::Quit => quit("quit!"),
+                HomeAction::Edit => {
+                    mode = "edit";
+                    print("enter edit mode!")
+                }
+            },
+            None => print(&format!("{}", key.code)),
+        },
+        Actions::Edit(config) => match config.get(&key) {
+            Some(action) => match action {
+                EditAction::Exit => {
+                    mode = "home";
+                    print("exit edit mode!")
+                }
+            },
+            None => print(&format!("{}", key.code)),
+        },
     })
 }
