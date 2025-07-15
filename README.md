@@ -213,31 +213,14 @@ assert_eq!(
 
 ## 📝 Key Syntax Reference
 
-### Single Keys
-- **Characters**: `a`, `b`, `1`, `2`, `!`, `@`
-- **Special keys**: `enter`, `space`, `tab`, `backspace`, `delete`, `esc`
-- **Arrow keys**: `up`, `down`, `left`, `right`
-- **Function keys**: `f1`, `f2`, ..., `f12`
+| Type | Description | Example |
+|---|---|---|
+| **Single Keys** | Individual characters, special keys, arrow keys, and function keys. | `a`, `enter`, `up`, `f1` |
+| **Key Combinations** | Keys pressed simultaneously with modifiers (Ctrl, Alt, Shift). | `ctrl-c`, `alt-f4`, `ctrl-alt-shift-f1` |
+| **Key Sequences** | Multiple keys pressed in order. | `g g` (press `g` twice), `ctrl-b n` (Ctrl+B, then N), `ctrl-b c` (tmux-style new window) |
+| **Key Groups** | Predefined patterns matching sets of keys. | `@upper` (A-Z), `@alpha` (A-Z, a-z), `@any` (any key) |
 
-### Key Combinations
-- **Ctrl**: `ctrl-c`, `ctrl-alt-d`
-- **Alt**: `alt-f4`, `alt-enter`
-- **Shift**: `shift-tab`, `shift-f1`
-- **Multiple modifiers**: `ctrl-alt-shift-f1`
-
-### Key Sequences
-- **Two keys**: `g g` (press `g` twice)
-- **With modifiers**: `ctrl-b n` (Ctrl+B, then N)
-- **Complex sequences**: `ctrl-x ctrl-s` (Emacs-style save)
-
-### Key Groups (Pattern Matching)
-- `@upper` - Matches A-Z
-- `@lower` - Matches a-z
-- `@alpha` - Matches A-Z and a-z
-- `@alnum` - Matches A-Z, a-z, and 0-9
-- `@any` - Matches any single key
-
-### Examples in Configuration
+**Examples in Configuration:**
 ```toml
 # Single keys
 Quit = { keys = ["q", "esc"] }
@@ -247,8 +230,8 @@ Save = { keys = ["ctrl-s"] }
 ForceQuit = { keys = ["ctrl-alt-f4"] }
 
 # Key sequences
-GitStatus = { keys = ["g s"] }
-EmacsSave = { keys = ["ctrl-x ctrl-s"] }
+ShowGitStatus = { keys = ["g s"] }
+NewTmuxWindow = { keys = ["ctrl-b c"] }
 
 # Key groups
 AnyLetter = { keys = ["@alpha"] }
