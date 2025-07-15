@@ -43,7 +43,7 @@ termion = ["dep:termion"]
 wasm = ["dep:web-sys", "dep:wasm-bindgen"]
 
 [dev-dependencies]
-toml = "0.8"
+toml = "0.9"
 wasm-bindgen-test = "0.3"
 
 [[example]]
