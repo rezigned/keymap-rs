@@ -7,6 +7,21 @@
 
 **keymap-rs** is a lightweight and extensible key mapping library for Rust that simplifies input processing for terminal user interfaces (TUIs), WebAssembly (WASM) applications, and more. It parses keymaps from derive macros or configuration files and maps them to actions from various input backends, including [`crossterm`](https://crates.io/crates/crossterm), [`termion`](https://docs.rs/termion/latest/termion/), and [`wasm`](https://webassembly.org/).
 
+## 📋 Table of Contents
+
+- [Features](#-features)
+- [Demo](#️-demo)
+- [Installation](#-installation)
+- [Usage](#-usage)
+  - [1. Deriving `KeyMap`](#1-deriving-keymap)
+  - [2. Using External Configuration](#2-using-external-configuration)
+  - [3. Compile-Time Validation](#3-compile-time-validation)
+  - [4. Direct Key Parsing](#4-direct-key-parsing)
+- [Key Syntax Reference](#-key-syntax-reference)
+- [Examples](#-examples)
+- [License](#-license)
+- [Contributions](#-contributions)
+
 ---
 
 ## 🔧 Features
@@ -47,7 +62,7 @@ cargo add keymap --feature {crossterm | termion | wasm}
 
 ## 🚀 Usage
 
-### 1. Deriving Keymaps
+### 1. Deriving `KeyMap`
 
 The easiest way to get started is with the `keymap::KeyMap` derive macro.
 
@@ -79,7 +94,7 @@ pub enum Action {
 
 **Use the generated keymap:**
 
-The `KeyMap` derive macro generates an associated `keymap_config()` method that returns a `Config<Action>`.
+The `KeyMap` derive macro generates an associated `keymap_config()` method, which returns a `Config<Action>`.
 
 ```rust
 // Retrieve the config
@@ -98,7 +113,7 @@ match config.get(&key) {
 
 ### 2. Using External Configuration
 
-Keymaps can also be loaded from external files (e.g., `config.toml`). This is useful for user-configurable keybindings.
+`keymap-rs` also supports loading keymaps from external files (e.g., `config.toml`). This is useful for user-configurable keybindings.
 
 **Example `config.toml`:**
 
@@ -116,8 +131,10 @@ This deserializes **only** the keybindings from the configuration file, ignoring
 
 ```rust
 // This config will only contain 'Jump' and 'Quit' from the TOML file.
-let config: Config<Action> = toml::from_str(config_str).unwrap();
+let config: Config<Action> = toml::from_str(&data)?;
 ```
+
+**Resulting keybindings:**
 
 | Key           | Action |
 | ------------- | ------ |
@@ -126,20 +143,23 @@ let config: Config<Action> = toml::from_str(config_str).unwrap();
 
 #### `DerivedConfig<T>`: Merge Derived and File Configs
 
-This **merges** the keybindings from the `#[key("...")]` attributes with the ones from the configuration file. Keys from the external file will override any conflicting keys defined in the enum.
+This **merges** keybindings from the `#[key("...")]` attributes with those from the configuration file. Keys from the external file will override any conflicting keys defined in the enum.
 
 ```rust
 // This config contains keys from both the derive macro and the TOML file.
-let config: DerivedConfig<Action> = toml::from_str(config_str).unwrap();
+let config: DerivedConfig<Action> = toml::from_str(&data)?;
 ```
 
-| Key                      | Action |
-| ------------------------ | ------ |
-| `"j"`, `"up"`            | Jump   |
-| `"h"`, `"left"`          | Left   |
-| `"l"`, `"right"`         | Right  |
-| `@any`                   | Quit   |
-| *`"q"`, `"esc"`, `"space"` are ignored* |
+**Resulting keybindings:**
+
+| Key                      | Action | Source |
+| ------------------------ | ------ | ------ |
+| `"j"`, `"up"`            | Jump   | Config file (overrides `"space"`) |
+| `"h"`, `"left"`          | Left   | Derive macro |
+| `"l"`, `"right"`         | Right  | Derive macro |
+| `@any`                   | Quit   | Config file (overrides `"q"`, `"esc"`) |
+
+> **Note**: When using `DerivedConfig<T>`, keys from the config file take precedence over derive macro keys for the same action.
 
 ### 3. Compile-Time Validation
 
@@ -191,12 +211,38 @@ assert_eq!(
 
 ---
 
+## 📝 Key Syntax Reference
+
+| Type | Description | Example |
+|---|---|---|
+| **Single Keys** | Individual characters, special keys, arrow keys, and function keys. | `a`, `enter`, `up`, `f1` |
+| **Key Combinations** | Keys pressed simultaneously with modifiers (Ctrl, Alt, Shift). | `ctrl-c`, `alt-f4`, `ctrl-alt-shift-f1` |
+| **Key Sequences** | Multiple keys pressed in order. | `g g` (press `g` twice), `ctrl-b n` (Ctrl+B, then N), `ctrl-b c` (tmux-style new window) |
+| **Key Groups** | Predefined patterns matching sets of keys. | `@upper` (A-Z), `@alpha` (A-Z, a-z), `@any` (any key) |
+
+**Examples in Configuration:**
+```toml
+# Single keys
+Quit = { keys = ["q", "esc"] }
+
+# Key combinations
+Save = { keys = ["ctrl-s"] }
+ForceQuit = { keys = ["ctrl-alt-f4"] }
+
+# Key sequences
+ShowGitStatus = { keys = ["g s"] }
+NewTmuxWindow = { keys = ["ctrl-b c"] }
+
+# Key groups
+AnyLetter = { keys = ["@alpha"] }
+AnyKey = { keys = ["@any"] }
+```
+
+---
+
 ## 📖 Examples
 
-For complete, runnable examples, check out the [`/examples`](https://github.com/rezigned/keymap-rs/tree/main/examples) directory, which includes demos for:
-- `crossterm`
-- `termion`
-- `wasm`
+For complete, runnable examples, check out the [`/examples`](https://github.com/rezigned/keymap-rs/tree/main/examples) directory.
 
 ---
 
@@ -209,4 +255,3 @@ This project is licensed under the [MIT License](https://github.com/rezigned/key
 ## 🙌 Contributions
 
 Contributions, issues, and feature requests are welcome! Feel free to open an issue or submit a pull request.
-

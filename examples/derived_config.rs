@@ -6,25 +6,26 @@ mod action;
 
 use crate::backend::{print, quit, run};
 use action::Action;
-use keymap::{Config, KeyMapConfig};
+use keymap::{DerivedConfig, KeyMapConfig};
 
 // Override default key mapping defined via #[derive(KeyMap)] in Action.
 pub(crate) const CONFIG: &str = r#"
 Jump = { keys = ["j"], description = "Jump Jump!" }
-Quit = { keys = ["esc"], description = "Quit with ESC only!" }
+Up = { keys = ["u"], description = "Fly!" }
+Quit = { keys = ["@digit"], description = "Quit!" }
 "#;
 
 fn main() -> std::io::Result<()> {
-    println!("# Example: External configuration with Config<T>");
+    println!("# Example: Merging derive macros with external config using DerivedConfig<T>");
 
-    let config: Config<Action> = toml::from_str(CONFIG).unwrap();
+    let config: DerivedConfig<Action> = toml::from_str(CONFIG).unwrap();
 
     run(|key| match config.get(&key) {
         Some(action) => match action {
             Action::Quit => quit("quit!"),
-            Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => print(
-                &format!("{action:?} = {}", action.keymap_item().description),
-            ),
+            Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => {
+                print(&format!("{action:?} = {}", action.keymap_item().description))
+            }
         },
         None => print(&format!("Unknown key {key:?}")),
     })

@@ -1,12 +1,11 @@
 use std::collections::HashMap;
 
+#[path = "./backend/mod.rs"]
+mod backend;
+
+use crate::backend::{print, quit, run};
 use keymap::DerivedConfig;
 use serde::Deserialize;
-
-use crate::crossterm_utils::{print, quit, run};
-
-#[path = "./crossterm/utils.rs"]
-mod crossterm_utils;
 
 #[derive(keymap::KeyMap, Deserialize, Debug, Hash, Eq, PartialEq)]
 enum HomeAction {
@@ -45,6 +44,7 @@ fn main() -> std::io::Result<()> {
     let modes: Modes = toml::from_str(CONFIG).unwrap();
     let mut mode = "home";
 
+    println!("# Example: Multi-mode application with different key mappings");
     println!("mode: {mode}\r");
 
     run(move |key| match modes.get(mode).unwrap() {
@@ -56,7 +56,7 @@ fn main() -> std::io::Result<()> {
                     print("enter edit mode!")
                 }
             },
-            None => print(&format!("{}", key.code)),
+            None => print(&format!("{key:?}")),
         },
         Actions::Edit(config) => match config.get(&key) {
             Some(action) => match action {
@@ -65,7 +65,7 @@ fn main() -> std::io::Result<()> {
                     print("exit edit mode!")
                 }
             },
-            None => print(&format!("{}", key.code)),
+            None => print(&format!("{key:?}")),
         },
     })
 }

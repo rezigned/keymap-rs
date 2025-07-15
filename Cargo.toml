@@ -47,34 +47,31 @@ toml = "0.9"
 wasm-bindgen-test = "0.3"
 
 [[example]]
-name = "crossterm"
-required-features = ["crossterm"]
+name = "simple"
+path = "examples/simple.rs"
+required-features = ["derive"]
 
 [[example]]
-name = "crossterm_derive"
-path = "examples/crossterm/derive.rs"
-required-features = ["crossterm", "derive"]
+name = "derive"
+path = "examples/derive.rs"
+required-features = ["derive"]
 
 [[example]]
-name = "crossterm_derived_config"
-path = "examples/crossterm/derived_config.rs"
-required-features = ["crossterm", "derive"]
+name = "config"
+path = "examples/config.rs"
+required-features = ["derive"]
 
 [[example]]
-name = "termion"
-required-features = ["termion"]
-
-[[example]]
-name = "termion_derive"
-path = "examples/termion/derive.rs"
-required-features = ["termion", "derive"]
-
-[[example]]
-name = "termion_derived_config"
-path = "examples/termion/derived_config.rs"
-required-features = ["termion", "derive"]
+name = "derived_config"
+path = "examples/derived_config.rs"
+required-features = ["derive"]
 
 [[example]]
 name = "modes"
 path = "examples/modes.rs"
-required-features = ["crossterm", "derive"]
+required-features = ["derive"]
+
+[[example]]
+name = "sequences"
+path = "examples/sequences.rs"
+required-features = ["derive"]
