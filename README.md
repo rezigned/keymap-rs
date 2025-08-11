@@ -9,8 +9,6 @@
 
 ## 📋 Table of Contents
 
-- [Features](#-features)
-- [Demo](#️-demo)
 - [Installation](#-installation)
 - [Usage](#-usage)
   - [1. Deriving `KeyMap`](#1-deriving-keymap)
@@ -26,16 +24,11 @@
 
 ## 🔧 Features
 
-* ✅ **Declarative Key Mappings**: Define keymaps via simple configuration (e.g., TOML, YAML) or directly in your code using derive macros.
+* ✅ **Declarative Key Mappings**: Define keymaps via simple configuration files (e.g., TOML, YAML) or directly in your code using derive macros.
 * ⌨️ **Key Patterns**: Supports single keys (`a`), combinations (`ctrl-b`), and multi-key sequences (`ctrl-b n`).
-* 🧠 **Key Groups**: Use built-in pattern matching for common key groups:
-  * `@upper` – Uppercase letters
-  * `@lower` – Lowercase letters
-  * `@alpha` – All alphabetic characters
-  * `@alnum` – Alphanumeric characters
-  * `@any` – Match any key
+* 🧠 **Key Groups**: Use built-in pattern matching for common key groups (`@upper`, `@lower`, `@alpha`, `@alnum`, and `@any`).
 * 🧬 **Compile-Time Safety**: The `keymap_derive` macro validates key syntax at compile time, preventing runtime errors.
-* 🌐 **Backend Agnostic**: Works with multiple backends, including `crossterm`, `termion`, and `wasm`.
+* 🌐 **Backend-Agnostic**: Works with multiple backends, including `crossterm`, `termion`, and `wasm`.
 * 🪶 **Lightweight & Extensible**: Designed to be minimal and easy to extend with new backends or features.
 
 ---
@@ -44,9 +37,24 @@
 
 See `keymap-rs` in action with the [WASM example](https://rezigned.com/keymap-rs/):
 
-<p align="center">
-  <img src="./examples/wasm/public/preview.png" alt="keymap-rs WASM Demo" width="700">
-</p>
+<table>
+  <thead>
+    <tr>
+      <th width="500px">Nyan Jump!</th>
+      <th width="500px">Tur - Turing Machine Language</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>
+        <a href="https://rezigned.com/keymap-rs"><img src="./examples/wasm/public/preview.png" alt="keymap-rs WASM Demo"/></a>
+      </td>
+      <td>
+        <a href="https://rezigned.com/tur"><img src="https://rezigned.com/tur/tur-web.png" /></a>
+      </td>
+    </tr>
+  </tbody>
+</table>
 
 ---
 
