@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-rc.4](https://github.com/rezigned/keymap-rs/compare/keymap_parser-v1.0.0-rc.3...keymap_parser-v1.0.0-rc.4) (2026-02-22)
+
+
+### Miscellaneous Chores
+
+* **keymap_parser:** Synchronize crates versions
+
 ## [1.0.0-rc.3](https://github.com/rezigned/keymap-rs/compare/keymap_parser-v1.0.0-rc.2...keymap_parser-v1.0.0-rc.3) (2025-07-11)
 
 

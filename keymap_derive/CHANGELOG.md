@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-rc.4](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.3...keymap_derive-v1.0.0-rc.4) (2026-02-22)
+
+
+### Features
+
+* support Key Group Capturing for dynamic variant data ([#35](https://github.com/rezigned/keymap-rs/issues/35)) ([29ae3cd](https://github.com/rezigned/keymap-rs/commit/29ae3cde6dbf1df433bda4babfa99ed045aac840))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * keymap_parser bumped from 1.0.0-rc.3 to 1.0.0-rc.4
+
 ## [1.0.0-rc.3](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.2...keymap_derive-v1.0.0-rc.3) (2025-07-11)
 
 
