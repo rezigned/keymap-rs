@@ -75,7 +75,7 @@ pub enum Error {
 impl std::fmt::Display for Error {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Error::Parse(e)          => write!(f, "{e}"),
+            Error::Parse(e) => write!(f, "{e}"),
             Error::UnsupportedKey(k) => write!(f, "{k}"),
         }
     }
@@ -84,7 +84,7 @@ impl std::fmt::Display for Error {
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         match self {
-            Error::Parse(e)          => Some(e),
+            Error::Parse(e) => Some(e),
             Error::UnsupportedKey(_) => None,
         }
     }

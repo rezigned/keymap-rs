@@ -19,12 +19,17 @@ fn main() -> std::io::Result<()> {
 
     let config: Config<Action> = toml::from_str(CONFIG).unwrap();
 
+    // Use .get() for high-performance reference lookup of the "default" variant.
+    // To capture the actual key pressed (e.g. the 'a' in @any), use .get_bound()
+    // or see the `capturing` example.
     run(|key| match config.get(&key) {
         Some(action) => match action {
             Action::Quit => quit("quit!"),
+            // Standard unit variants work as before
             Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => print(
                 &format!("{action:?} = {}", action.keymap_item().description),
             ),
+            Action::Shoot(_) => print("Shoot! (Use .get_bound() to capture the character)"),
         },
         None => print(&format!("Unknown key {key:?}")),
     })

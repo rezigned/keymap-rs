@@ -93,6 +93,18 @@ pub trait KeyMapConfig<T> {
     /// assert_eq!(item.description, "Create an item");
     /// ```
     fn keymap_item(&self) -> Item;
+
+    /// Binds the given parsed key sequence (`keys`) to this variant, potentially
+    /// extracting values (such as a `char` from an `@any` group) and returning
+    /// a new instance of the variant.
+    ///
+    /// By default, this simply clones the variant if it has no data fields.
+    fn bind(&self, _keys: &[KeyMap]) -> Self
+    where
+        Self: Clone,
+    {
+        self.clone()
+    }
 }
 
 /// A deserializable configuration structure that maps keys to items.
@@ -304,6 +316,20 @@ impl<T> Config<T> {
         self.get_item_by_keymaps(&nodes).map(|(t, _)| t)
     }
 
+    /// Retrieve the dynamically bound key type `T` by extracting payload data
+    /// from a sequence of parsed key events.
+    pub fn get_bound_seq<K: ToKeyMap>(&self, keys: &[K]) -> Option<T>
+    where
+        T: KeyMapConfig<T> + Clone,
+    {
+        let nodes = keys
+            .iter()
+            .map(|key| key.to_keymap().ok())
+            .collect::<Option<Vec<_>>>()?;
+
+        self.get_bound_item_by_keymaps(&nodes).map(|(t, _)| t)
+    }
+
     /// Lookup an `(T, Item)` pair by a parsed `KeyMap`, returning a
     /// reference to the key type `T` and the associated `Item` if found.
     ///
@@ -333,6 +359,27 @@ impl<T> Config<T> {
         self.get_item_by_keymap(node).map(|(t, _)| t)
     }
 
+    /// Retrieve the dynamically bound key type `T` by extracting payload data
+    /// (such as a matched `char` from `@any`) from the given key event.
+    ///
+    /// Requires `T: KeyMapConfig<T> + Clone` to use the `bind` method.
+    pub fn get_bound<K: ToKeyMap>(&self, key: &K) -> Option<T>
+    where
+        T: KeyMapConfig<T> + Clone,
+    {
+        self.get_bound_by_keymap(&key.to_keymap().ok()?)
+    }
+
+    /// Retrieve the dynamically bound key type `T` by extracting payload data
+    /// from a single parsed `KeyMap`.
+    pub fn get_bound_by_keymap(&self, node: &KeyMap) -> Option<T>
+    where
+        T: KeyMapConfig<T> + Clone,
+    {
+        let keys = std::slice::from_ref(node);
+        self.get_item_by_keymaps(keys).map(|(t, _)| t.bind(keys))
+    }
+
     /// Lookup an `(T, Item)` pair by an entire slice of parsed [`type@KeyMap`]s.
     /// This performs an exact match against one of the stored `Vec<KeyMap>`.
     ///
@@ -354,6 +401,17 @@ impl<T> Config<T> {
         self.matcher
             .get(keys)
             .map(|i| (&self.items[*i].0, &self.items[*i].1))
+    }
+
+    /// Lookup an `(T, Item)` pair by an entire slice of parsed [`type@KeyMap`]s,
+    /// and dynamically bind the matched keys to construct a new `T`.
+    pub fn get_bound_item_by_keymaps(&self, keys: &[KeyMap]) -> Option<(T, &Item)>
+    where
+        T: KeyMapConfig<T> + Clone,
+    {
+        self.matcher
+            .get(keys)
+            .map(|i| (self.items[*i].0.bind(keys), &self.items[*i].1))
     }
 
     /// Lookup an `(T, Item)` by a raw string. This will attempt to parse the

@@ -7,7 +7,7 @@ use crate::backend::{print, quit, run};
 use keymap::DerivedConfig;
 use serde::Deserialize;
 
-#[derive(keymap::KeyMap, Deserialize, Debug, Hash, Eq, PartialEq)]
+#[derive(keymap::KeyMap, Debug, Hash, Eq, PartialEq, Clone)]
 enum HomeAction {
     #[key("esc")]
     Quit,
@@ -15,7 +15,7 @@ enum HomeAction {
     Edit,
 }
 
-#[derive(keymap::KeyMap, Deserialize, Debug, Hash, Eq, PartialEq)]
+#[derive(keymap::KeyMap, Debug, Hash, Eq, PartialEq, Clone)]
 enum EditAction {
     #[key("esc")]
     Exit,

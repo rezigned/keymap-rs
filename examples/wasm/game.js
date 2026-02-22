@@ -279,9 +279,9 @@ class ObstacleManager {
 
       const spawnX = lastObstacle
         ? Math.max(
-            canvas.width,
-            lastObstacle.x + CONFIG.OBSTACLE.MIN_GAP + randomOffset,
-          )
+          canvas.width,
+          lastObstacle.x + CONFIG.OBSTACLE.MIN_GAP + randomOffset,
+        )
         : canvas.width + randomOffset;
 
       const type =
@@ -412,8 +412,11 @@ class RainbowTrail {
 
   draw() {
     this.particles.forEach((particle) => {
-      ctx.fillStyle = Utils.hexToRgba(particle.color, particle.alpha);
+      ctx.save();
+      ctx.globalAlpha = particle.alpha;
+      ctx.fillStyle = particle.color;
       ctx.fillRect(particle.x, particle.y, particle.width, particle.height);
+      ctx.restore();
     });
   }
 }
@@ -692,4 +695,17 @@ export function pauseGame() {
 
 export function setKey(key, description) {
   game.setKey(key, description);
+}
+
+export function setSkin(c) {
+  // Handle char code or string character
+  const char = typeof c === 'number' ? String.fromCharCode(c) : c;
+  const digit = parseInt(char);
+  if (isNaN(digit)) return;
+
+  // Change rainbow trail colors based on digit
+  const baseHue = (digit * 36) % 360;
+  game.rainbowTrail.colors = Array.from({ length: 6 }, (_, i) => {
+    return `hsl(${(baseHue + i * 20) % 360}, 100%, 50%)`;
+  });
 }

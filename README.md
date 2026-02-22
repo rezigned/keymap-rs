@@ -27,6 +27,7 @@
 * ✅ **Declarative Key Mappings**: Define keymaps via simple configuration files (e.g., TOML, YAML) or directly in your code using derive macros.
 * ⌨️ **Key Patterns**: Supports single keys (`a`), combinations (`ctrl-b`), and multi-key sequences (`ctrl-b n`).
 * 🧠 **Key Groups**: Use built-in pattern matching for common key groups (`@upper`, `@lower`, `@alpha`, `@alnum`, and `@any`).
+* 📸 **Key Group Capturing**: Capture specific keypress data (like the actual `char` from `@any` or `@digit`) directly into your action enum variants at runtime.
 * 🧬 **Compile-Time Safety**: The `keymap_derive` macro validates key syntax at compile time, preventing runtime errors.
 * 🌐 **Backend-Agnostic**: Works with multiple backends, including `crossterm`, `termion`, and `wasm`.
 * 🪶 **Lightweight & Extensible**: Designed to be minimal and easy to extend with new backends or features.
@@ -97,6 +98,11 @@ pub enum Action {
     /// Jump.
     #[key("space")]
     Jump,
+
+    /// Key Group Capturing action (e.g. tracking which character was pressed).
+    /// `char` will be captured from any matched key group macro (like `@any` or `@digit`) at runtime.
+    #[key("@any")]
+    Shoot(char),
 }
 ```
 
@@ -109,6 +115,7 @@ The `KeyMap` derive macro generates an associated `keymap_config()` method, whic
 let config = Action::keymap_config();
 
 // `key` is a key code from the input backend, e.g., `crossterm::event::KeyCode`
+// You can lookup the default pre-instantiated action reference:
 match config.get(&key) {
     Some(action) => match action {
         Action::Quit => break,
@@ -117,7 +124,14 @@ match config.get(&key) {
     }
     _ => {}
 }
+
+// Or use Key Group Capturing to extract the actual `char` from `@any` or `@digit`!
+if let Some(Action::Shoot(c)) = config.get_bound(&key) {
+    println!("Captured key: {c}");
+}
 ```
+
+> **Note**: `keymap_derive` automatically generates custom `Serialize` and `Deserialize` implementations for the derived `enum`, making your variants with captured data serialize as simple tags (e.g. `"Shoot"`) out of the box so that Map deserialization continues to work flawlessly.
 
 ### 2. Using External Configuration
 
