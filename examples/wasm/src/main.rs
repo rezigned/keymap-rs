@@ -1,5 +1,5 @@
 use keymap::{DerivedConfig, ToKeyMap};
-use serde::Deserialize;
+
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use web_sys::{window, KeyboardEvent};
@@ -13,9 +13,10 @@ extern "C" {
     fn resetGame();
     fn pauseGame();
     fn setKey(key: String, desc: String);
+    fn setSkin(c: char);
 }
 
-#[derive(Debug, Clone, keymap::KeyMap, Deserialize, Hash, PartialEq, Eq)]
+#[derive(Debug, Clone, keymap::KeyMap, Hash, PartialEq, Eq)]
 pub enum Action {
     /// Jump over obstacles
     #[key("space")]
@@ -36,6 +37,10 @@ pub enum Action {
     /// Restart
     #[key("q", "esc")]
     Quit,
+
+    /// Select a skin
+    #[key("@digit")]
+    SelectSkin(char),
 }
 
 /// Overrides the default keymap
@@ -45,6 +50,7 @@ Jump = { keys = ["space", "up"], description = "Jump Jump!" }
 Quit = { keys = ["q", "esc"], description = "Quit!" }
 Left = { keys = ["left", "alt-l"], description = "Move Left" }
 Right = { keys = ["right", "alt-r"], description = "Move Right" }
+SelectSkin = { keys = ["@digit"], description = "Select a skin" }
 "#;
 
 #[allow(unused)]
@@ -111,11 +117,18 @@ pub fn handle_key_event(event: &KeyboardEvent, is_keydown: bool) {
         setKey(key.to_string(), desc);
     }
 
-    if let Some(action) = config.get(event) {
+    // Use .get_bound() to support Key Group Capturing for SelectSkin
+    if let Some(action) = config.get_bound(event) {
         match action {
             Action::Quit => {
                 if is_keydown {
                     resetGame();
+                }
+            }
+            Action::SelectSkin(c) => {
+                if is_keydown {
+                    setSkin(c);
+                    setKey(format!("Skin selected: {c}"), "Key Group Capturing!".to_string());
                 }
             }
             _ if !is_game_over => match action {

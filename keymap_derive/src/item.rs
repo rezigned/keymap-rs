@@ -7,48 +7,49 @@ const DOC_IDENT: &str = "doc";
 
 pub(crate) struct Item<'a> {
     pub variant: &'a Variant,
+    /// Raw string representations of the keys (e.g., ["ctrl-c", "@any"]).
     pub keys: Vec<String>,
-    pub ignore: bool,
-
-    #[allow(dead_code)]
+    /// Fully parsed nodes for each key sequence. Used for inspecting
+    /// key groups (like @any, @digit) during Key Group Capturing.
     pub nodes: Vec<Vec<Node>>,
+    pub ignore: bool,
     pub description: String,
 }
 
-pub(crate) fn parse_items(variants: &Punctuated<Variant, Comma>) -> Result<Vec<Item<'_>>, syn::Error> {
+pub(crate) fn parse_items(
+    variants: &Punctuated<Variant, Comma>,
+) -> Result<Vec<Item<'_>>, syn::Error> {
     // NOTE: All variants are parsed, even those without the #[key(...)] attribute.
     // This allows the deserializer to override keys and descriptions for variants that don't define them explicitly.
     variants
         .iter()
         .map(|variant| {
             let ignore = parse_ignore(variant);
+            let (keys, nodes) = parse_keys(variant, ignore)?;
 
             Ok(Item {
                 variant,
                 ignore,
                 description: parse_doc(variant),
-                keys: parse_keys(variant, ignore)?,
-                nodes: parse_nodes(variant, ignore)?,
+                keys,
+                nodes,
             })
         })
         .collect()
 }
 
 fn parse_ignore(variant: &Variant) -> bool {
-    variant
-        .attrs
-        .iter()
-        .any(|attr| {
-            let mut ignore = false;
-            if attr.path().is_ident(KEY_IDENT) {
-                let _ = attr.parse_nested_meta(|meta| {
-                    ignore = meta.path.is_ident("ignore");
-                    Ok(())
-                });
-            }
+    variant.attrs.iter().any(|attr| {
+        let mut ignore = false;
+        if attr.path().is_ident(KEY_IDENT) {
+            let _ = attr.parse_nested_meta(|meta| {
+                ignore = meta.path.is_ident("ignore");
+                Ok(())
+            });
+        }
 
-            ignore
-        })
+        ignore
+    })
 }
 
 fn parse_doc(variant: &Variant) -> String {
@@ -81,30 +82,8 @@ fn parse_args(attr: &Attribute) -> syn::Result<Punctuated<LitStr, Token![,]>> {
     attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty)
 }
 
-fn parse_keys(variant: &Variant, ignore: bool) -> syn::Result<Vec<String>> {
+fn parse_keys(variant: &Variant, ignore: bool) -> syn::Result<(Vec<String>, Vec<Vec<Node>>)> {
     let mut keys = Vec::new();
-
-    for attr in &variant.attrs {
-        if !attr.path().is_ident(KEY_IDENT) || ignore {
-            continue;
-        }
-
-        // Collect arguments
-        //
-        // e.g. [["a"], ["g g"]]
-        for arg in parse_args(attr)? {
-            let val = arg.value();
-            parse_seq(&val)
-                .map_err(|e| syn::Error::new(arg.span(), format!("Invalid key \"{val}\": {e}")))?;
-
-            keys.push(val);
-        }
-    }
-
-    Ok(keys)
-}
-
-fn parse_nodes(variant: &Variant, ignore: bool) -> syn::Result<Vec<Vec<Node>>> {
     let mut nodes = Vec::new();
 
     for attr in &variant.attrs {
@@ -117,12 +96,13 @@ fn parse_nodes(variant: &Variant, ignore: bool) -> syn::Result<Vec<Vec<Node>>> {
         // e.g. [["a"], ["g g"]]
         for arg in parse_args(attr)? {
             let val = arg.value();
-            let keys = parse_seq(&val)
+            let seq = parse_seq(&val)
                 .map_err(|e| syn::Error::new(arg.span(), format!("Invalid key \"{val}\": {e}")))?;
 
-            nodes.push(keys);
+            keys.push(val);
+            nodes.push(seq);
         }
     }
 
-    Ok(nodes)
+    Ok((keys, nodes))
 }

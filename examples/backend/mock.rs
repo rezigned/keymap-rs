@@ -13,7 +13,7 @@ impl ToKeyMap for Key {
 }
 
 #[allow(dead_code)]
-pub(crate) fn run<F>(mut f: F) -> io::Result<()>
+pub(crate) fn run<F>(_f: F) -> io::Result<()>
 where
     F: FnMut(Key) -> bool,
 {

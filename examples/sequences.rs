@@ -8,7 +8,7 @@ use std::time::{Duration, Instant};
 
 use crate::backend::{print, quit, run, Key};
 use action::Action;
-use keymap::DerivedConfig;
+use keymap::{DerivedConfig, KeyMapConfig};
 
 // Override default key mapping defined via #[derive(KeyMap)] in Action.
 pub(crate) const CONFIG: &str = r#"
@@ -26,9 +26,10 @@ fn main() -> std::io::Result<()> {
         let ret = match config.get(&key) {
             Some(action) => match action {
                 Action::Quit => quit("quit!"),
-                Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => {
-                    print(&format!("{action:?}"))
-                }
+                Action::Shoot(_) => print("Shoot!"),
+                Action::Up | Action::Down | Action::Left | Action::Right | Action::Jump => print(
+                    &format!("{action:?} = {}", action.keymap_item().description),
+                ),
             },
             None => {
                 // Handle key sequence

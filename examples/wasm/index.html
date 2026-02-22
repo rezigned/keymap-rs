@@ -38,7 +38,7 @@
     <p>
       Define an enum and automatically derive key bindings using the <code>#[derive(KeyMap)]</code> macro.
     </p>
-    <pre><code class="language-rust">#[derive(keymap::KeyMap, Deserialize, Hash, PartialEq, Eq)]
+    <pre><code class="language-rust">#[derive(keymap::KeyMap, Hash, PartialEq, Eq, Clone)]
 pub enum Action {
   /// Jump over obstacles
   #[key("space")]
@@ -52,9 +52,9 @@ pub enum Action {
   #[key("right")]
   Right,
 
-  /// Pause
-  #[key("p")]
-  Pause,
+  /// Select a skin (Key Group Capturing!)
+  #[key("@digit")]
+  SelectSkin(char),
 
   /// Restart
   #[key("q", "esc")]
