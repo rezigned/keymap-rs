@@ -143,21 +143,6 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             }
         };
 
-        let variant_expr_default = match &item.variant.fields {
-            Fields::Unit => quote! { #name::#ident },
-            Fields::Unnamed(fields) => {
-                let defaults = fields.unnamed.iter().map(|_| quote! { Default::default() });
-                quote! { #name::#ident(#(#defaults),*) }
-            }
-            Fields::Named(fields) => {
-                let defaults = fields.named.iter().map(|f| {
-                    let name = &f.ident;
-                    quote! { #name: Default::default() }
-                });
-                quote! { #name::#ident { #(#defaults),* } }
-            }
-        };
-
         let variant_pat = match &item.variant.fields {
             Fields::Unit => quote! { #name::#ident },
             Fields::Unnamed(_) => quote! { #name::#ident(..) },
@@ -170,24 +155,36 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             #variant_pat => #variant_name_str,
         });
 
-        match_arms_deserialize.push(quote! {
-            #variant_name_str => Ok(#variant_expr_default),
-        });
-
-        match_arms_bind.push(quote! {
-            #variant_pat => #variant_expr,
-        });
-
-        // keymap_item
-        match_arms.push(quote! {
-            #variant_pat => ::keymap::Item::new(
-                vec![#(#keys),*],
-                #doc.to_string()
-            ),
-        });
-
-        // keymap_config
         if !item.ignore {
+            match_arms_bind.push(quote! {
+                #variant_pat => #variant_expr,
+            });
+
+            let variant_expr_default = match &item.variant.fields {
+                Fields::Unit => quote! { #name::#ident },
+                Fields::Unnamed(fields) => {
+                    let defaults = fields.unnamed.iter().map(|_| quote! { Default::default() });
+                    quote! { #name::#ident(#(#defaults),*) }
+                }
+                Fields::Named(fields) => {
+                    let defaults = fields.named.iter().map(|f| {
+                        let name = &f.ident;
+                        quote! { #name: Default::default() }
+                    });
+                    quote! { #name::#ident { #(#defaults),* } }
+                }
+            };
+
+            match_arms_deserialize.push(quote! {
+                #variant_name_str => Ok(#variant_expr_default),
+            });
+            match_arms.push(quote! {
+                #variant_pat => ::keymap::Item::new(
+                    vec![#(#keys),*],
+                    #doc.to_string()
+                ),
+            });
+
             entries.push(quote! {
                 (
                     #variant_expr_default,
@@ -250,6 +247,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             fn keymap_item(&self) -> ::keymap::Item {
                 match self {
                     #(#match_arms)*
+                    _ => ::core::unreachable!("ignored variant has no keymap"),
                 }
             }
 
@@ -259,6 +257,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             {
                 match self {
                     #(#match_arms_bind)*
+                    _ => ::core::unreachable!("ignored variant cannot be bound"),
                 }
             }
         }
