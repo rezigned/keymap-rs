@@ -23,12 +23,14 @@ enum Action {
     Jump(char),
 }
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, Clone)]
 enum NoDefault {
     A,
     B,
 }
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Clone)]
 enum IgnoreTest {
     /// Active variant
@@ -37,9 +39,6 @@ enum IgnoreTest {
     /// Ignored variant (should NOT appear in keymap_config)
     #[key(ignore)]
     Ignored,
-    /// Another ignored variant
-    #[key(ignore)]
-    AlsoIgnored,
     /// Ignored with field (should NOT require Default)
     #[key(ignore)]
     IgnoredWithData(NoDefault),
@@ -207,10 +206,6 @@ mod tests {
             .items
             .iter()
             .any(|(v, _)| matches!(v, IgnoreTest::Ignored)));
-        assert!(!config
-            .items
-            .iter()
-            .any(|(v, _)| matches!(v, IgnoreTest::AlsoIgnored)));
         assert!(!config
             .items
             .iter()

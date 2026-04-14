@@ -99,7 +99,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
         let mut char_idx: Option<usize> = None;
         if let Some(first_node_seq) = item.nodes.first() {
             for (idx, node) in first_node_seq.iter().enumerate() {
-                if let ::keymap_parser::node::Key::Group(_) = node.key {
+                if let keymap_parser::node::Key::Group(_) = node.key {
                     char_idx = Some(idx);
                 }
             }
@@ -108,7 +108,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
         let extract_char = if let Some(idx) = char_idx {
             quote! {
                 match keys.get(#idx).map(|n| &n.key) {
-                    Some(::keymap_parser::node::Key::Char(c)) => *c,
+                    Some(::keymap::node::Key::Char(c)) => *c,
                     _ => Default::default(),
                 }
             }
