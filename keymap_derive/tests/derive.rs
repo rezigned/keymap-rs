@@ -23,6 +23,28 @@ enum Action {
     Jump(char),
 }
 
+#[derive(Debug, PartialEq, Eq, Clone)]
+enum NoDefault {
+    A,
+    B,
+}
+
+#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Clone)]
+enum IgnoreTest {
+    /// Active variant
+    #[key("a")]
+    Active,
+    /// Ignored variant (should NOT appear in keymap_config)
+    #[key(ignore)]
+    Ignored,
+    /// Another ignored variant
+    #[key(ignore)]
+    AlsoIgnored,
+    /// Ignored with field (should NOT require Default)
+    #[key(ignore)]
+    IgnoredWithData(NoDefault),
+}
+
 #[cfg(test)]
 mod tests {
     use keymap_dev::{Error, Item, KeyMap, KeyMapConfig, ToKeyMap};
@@ -158,5 +180,40 @@ mod tests {
             .collect::<Vec<_>>();
         let bound_action = config.get_bound_seq(&keys).unwrap();
         assert_eq!(bound_action, Action::Create);
+    }
+
+    #[test]
+    fn test_key_ignore_not_in_config() {
+        let config = IgnoreTest::keymap_config();
+
+        assert_eq!(config.items.len(), 1);
+        assert_eq!(
+            config.items[0],
+            (
+                IgnoreTest::Active,
+                Item::new(
+                    ["a"].map(ToString::to_string).to_vec(),
+                    "Active variant".to_string()
+                )
+            )
+        );
+    }
+
+    #[test]
+    fn test_ignored_variant_no_default_required() {
+        let config = IgnoreTest::keymap_config();
+
+        assert!(!config
+            .items
+            .iter()
+            .any(|(v, _)| matches!(v, IgnoreTest::Ignored)));
+        assert!(!config
+            .items
+            .iter()
+            .any(|(v, _)| matches!(v, IgnoreTest::AlsoIgnored)));
+        assert!(!config
+            .items
+            .iter()
+            .any(|(v, _)| matches!(v, IgnoreTest::IgnoredWithData(_))));
     }
 }
