@@ -253,6 +253,7 @@ pub struct Item {
     pub keys: Vec<String>,
 
     /// A short description for display or documentation purposes.
+    #[serde(default)]
     pub description: String,
 }
 
@@ -565,13 +566,16 @@ where
                 let mut config = T::keymap_config();
 
                 // Merge user-specified entries: replace or append
-                while let Some((t, item)) = map.next_entry::<T, Item>()? {
+                while let Some((t, mut item)) = map.next_entry::<T, Item>()? {
                     if let Some(pos) = config
                         .items
                         .iter()
                         .position(|(existing_key, _)| existing_key == &t)
                     {
                         // Override the default Item if the key matches
+                        if item.description.is_empty() {
+                            item.description = config.items[pos].1.description.clone();
+                        }
                         config.items[pos].1 = item;
                     } else {
                         // Append a new entry
@@ -608,17 +612,26 @@ mod tests {
     impl KeyMapConfig<Action> for Action {
         fn keymap_config() -> Config<Action> {
             Config::new(vec![
-                (Action::Create, Item::new(vec!["n".into()], "".into())),
-                (Action::Update, Item::new(vec!["u".into()], "".into())),
-                (Action::Delete, Item::new(vec![], "".into())),
+                (
+                    Action::Create,
+                    Item::new(vec!["c".into()], "Default Create".into()),
+                ),
+                (
+                    Action::Update,
+                    Item::new(vec!["u".into()], "Default Update".into()),
+                ),
+                (
+                    Action::Delete,
+                    Item::new(vec!["d".into()], "Default Delete".into()),
+                ),
             ])
         }
 
         fn keymap_item(&self) -> Item {
             match self {
-                Action::Create => Item::new(vec!["n".into()], "".into()),
-                Action::Update => Item::new(vec!["u".into()], "".into()),
-                Action::Delete => Item::new(vec![], "".into()),
+                Action::Create => Item::new(vec!["c".into()], "Default Create".into()),
+                Action::Update => Item::new(vec!["u".into()], "Default Update".into()),
+                Action::Delete => Item::new(vec!["d".into()], "Default Delete".into()),
             }
         }
     }
@@ -669,15 +682,31 @@ mod tests {
         let config: DerivedConfig<Action> = toml::from_str(CONFIG).unwrap();
 
         // "c" was provided by user config
-        let (action, _) = config.get_item_by_key_str("c").unwrap();
+        let (action, item) = config.get_item_by_key_str("c").unwrap();
         assert_eq!(*action, Action::Create);
+        assert_eq!(item.description, "Create a new item");
 
         // "u" falls back to default from KeyMapConfig
-        let (action, _) = config.get_item_by_key_str("u").unwrap();
+        let (action, item) = config.get_item_by_key_str("u").unwrap();
         assert_eq!(*action, Action::Update);
+        assert_eq!(item.description, "Default Update");
 
         // "d" was provided by user config
-        let (action, _) = config.get_item_by_key_str("d").unwrap();
+        let (action, item) = config.get_item_by_key_str("d").unwrap();
         assert_eq!(*action, Action::Delete);
+        assert_eq!(item.description, "Delete an item");
+    }
+
+    #[test]
+    fn test_derive_config_merges_description_when_empty() {
+        let toml = r#"
+            Create = { keys = ["c"] }
+        "#;
+
+        let config: DerivedConfig<Action> = toml::from_str(toml).unwrap();
+
+        let (action, item) = config.get_item_by_key_str("c").unwrap();
+        assert_eq!(*action, Action::Create);
+        assert_eq!(item.description, "Default Create");
     }
 }
