@@ -68,9 +68,10 @@ mod tests {
             (Action::Delete, "d d"),
             (Action::Delete, "delete"),
         ]
-        .map(|(action, input)| {
+        .iter()
+        .for_each(|(action, input)| {
             let key = keymap_parser::parse_seq(input).unwrap();
-            assert_eq!(&action, config.get_item_by_keymaps(&key).unwrap().0);
+            assert_eq!(action, config.get_item_by_keymaps(&key).unwrap().0);
         });
     }
 
@@ -82,9 +83,10 @@ mod tests {
             (Action::Delete, "x"),      // @lower
             (Action::Digit('\0'), "1"), // @digit
         ]
-        .map(|(action, input)| {
+        .iter()
+        .for_each(|(action, input)| {
             let key = keymap_parser::parse_seq(input).unwrap();
-            assert_eq!(&action, config.get_item_by_keymaps(&key).unwrap().0);
+            assert_eq!(action, config.get_item_by_keymaps(&key).unwrap().0);
         });
     }
 

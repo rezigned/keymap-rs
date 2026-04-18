@@ -358,9 +358,10 @@ mod tests {
             ("shift-a-delete", err("expect end of input, found: -", 7)),
             ("al", err("expect end of input, found: l", 1)),
         ]
-        .map(|(input, result)| {
+        .iter()
+        .for_each(|(input, result)| {
             let output = parse(input);
-            assert_eq!(result, output);
+            assert_eq!(result, &output);
         });
     }
 
@@ -373,8 +374,10 @@ mod tests {
                 Ok(vec![parse("ctrl-b").unwrap(), parse("l").unwrap()]),
             ),
             ("ctrl-b -l", Err(parse("-l").unwrap_err())), // Invalid: dangling separator
+            ("b", Ok(vec![parse("b").unwrap()])),
         ]
-        .map(|(s, v)| assert_eq!(super::parse_seq(s), v));
+        .iter()
+        .for_each(|(s, v)| assert_eq!(&super::parse_seq(s), v));
     }
 
     #[test]
@@ -387,7 +390,7 @@ mod tests {
         });
 
         // Invalid: above f12
-        [13, 15].map(|n| {
+        [13, 15].iter().for_each(|n| {
             let input = format!("f{n}");
             let result = parse(&input);
             assert!(result.is_err());
@@ -397,10 +400,12 @@ mod tests {
     #[test]
     fn test_parse_enum() {
         // Check named keys
-        [("up", Key::Up), ("esc", Key::Esc), ("del", Key::Delete)].map(|(s, key)| {
-            let result = parse(s);
-            assert_eq!(result.unwrap().key, key);
-        });
+        [("up", Key::Up), ("esc", Key::Esc), ("del", Key::Delete)]
+            .iter()
+            .for_each(|(s, key)| {
+                let result = parse(s);
+                assert_eq!(&result.unwrap().key, key);
+            });
     }
 
     #[test]
@@ -413,9 +418,10 @@ mod tests {
             ("@alnum", Key::Group(CharGroup::Alnum)),
             ("@any", Key::Group(CharGroup::Any)),
         ]
-        .map(|(input, expected_key)| {
+        .iter()
+        .for_each(|(input, expected_key)| {
             let result = parse(input);
-            assert_eq!(result.unwrap().key, expected_key);
+            assert_eq!(&result.unwrap().key, expected_key);
         });
 
         // Test invalid group names
@@ -455,8 +461,9 @@ mod tests {
                 "cmd-shift-f",
             ),
         ]
-        .map(|(node, expected)| {
-            assert_eq!(expected, format!("{node}"));
+        .iter()
+        .for_each(|(node, expected)| {
+            assert_eq!(expected, &format!("{node}"));
         });
     }
 
@@ -489,9 +496,10 @@ delete = "d"
             Node::new(0, Key::Group(CharGroup::Digit)),
             Node::new(Modifier::Alt as u8, Key::Group(CharGroup::Lower)),
         ]
-        .map(|n| {
-            let (key, _) = result.keys.get_key_value(&n).unwrap();
-            assert_eq!(key, &n);
+        .iter()
+        .for_each(|n| {
+            let (key, _) = result.keys.get_key_value(n).unwrap();
+            assert_eq!(key, n);
         });
     }
 

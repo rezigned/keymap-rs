@@ -1,4 +1,5 @@
 #[cfg(feature = "derive")]
+#[allow(dead_code)]
 #[derive(Debug, keymap::KeyMap, Hash, PartialEq, Eq, Clone)]
 pub(crate) enum Action {
     /// Jump over obstacles

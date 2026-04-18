@@ -93,9 +93,16 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             .collect::<Vec<_>>();
         let doc = &item.description;
 
-        // Find the index of a key group (like @any, @digit, etc.) in the parsed nodes.
-        // For simplicity, we only check the first key mapped to this variant.
-        // If the first key contains a group, the matched node at that index will be a `Char`.
+        // `char_idx` is the position of a key group node (e.g. `@any`, `@digit`) within
+        // the first key sequence of this variant. It is `None` when no group is present.
+        //
+        // Example: `#[key("@digit")]` → sequence is `[@digit]` → char_idx = Some(0)
+        //          `#[key("d")]`      → sequence is `[d]`      → char_idx = None
+        //
+        // Only the first key sequence is inspected because all keys for a given variant
+        // must share the same group position (they map to the same field type).
+        // At runtime, `char_idx` tells `extract_via_trait` which node to pass to
+        // `KeyGroupValue::from_keymap_node` when binding the matched character/digit.
         let mut char_idx: Option<usize> = None;
         if let Some(first_node_seq) = item.nodes.first() {
             for (idx, node) in first_node_seq.iter().enumerate() {
@@ -105,24 +112,29 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             }
         }
 
-        let extract_char = if let Some(idx) = char_idx {
-            quote! {
-                match keys.get(#idx).map(|n| &n.key) {
-                    Some(::keymap::node::Key::Char(c)) => *c,
-                    _ => Default::default(),
+        // Generates an expression for extracting a value at the key group index using the
+        // `KeyGroupValue` trait. This works for any type that implements the trait, including
+        // type aliases, because the trait bound is resolved at monomorphisation time rather
+        // than by inspecting the token string of the type.
+        let extract_via_trait = |ty: &syn::Type| -> proc_macro2::TokenStream {
+            if let Some(idx) = char_idx {
+                quote! {
+                    match keys.get(#idx) {
+                        Some(node) => <#ty as ::keymap::KeyGroupValue>::from_keymap_node(node),
+                        None => Default::default(),
+                    }
                 }
+            } else {
+                quote! { Default::default() }
             }
-        } else {
-            quote! { Default::default() }
         };
 
         let variant_expr = match &item.variant.fields {
             Fields::Unit => quote! { #name::#ident },
             Fields::Unnamed(fields) => {
                 let defaults = fields.unnamed.iter().map(|f| {
-                    let ty_str = quote!(#f).to_string();
-                    if ty_str == "char" {
-                        extract_char.clone()
+                    if char_idx.is_some() {
+                        extract_via_trait(&f.ty)
                     } else {
                         quote! { Default::default() }
                     }
@@ -131,12 +143,12 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
             }
             Fields::Named(fields) => {
                 let defaults = fields.named.iter().map(|f| {
-                    let name = f.ident.as_ref().unwrap();
-                    let ty_str = quote!(#f).to_string();
-                    if ty_str.contains("char") {
-                        quote! { #name: #extract_char }
+                    let field_name = f.ident.as_ref().unwrap();
+                    if char_idx.is_some() {
+                        let expr = extract_via_trait(&f.ty);
+                        quote! { #field_name: #expr }
                     } else {
-                        quote! { #name: Default::default() }
+                        quote! { #field_name: Default::default() }
                     }
                 });
                 quote! { #name::#ident { #(#defaults),* } }

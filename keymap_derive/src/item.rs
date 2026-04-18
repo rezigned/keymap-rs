@@ -7,7 +7,7 @@ const DOC_IDENT: &str = "doc";
 
 pub(crate) struct Item<'a> {
     pub variant: &'a Variant,
-    /// Raw string representations of the keys (e.g., ["ctrl-c", "@any"]).
+    /// Raw string representations of the keys (e.g., ["ctrl-c", "@any", "g g"]).
     pub keys: Vec<String>,
     /// Fully parsed nodes for each key sequence. Used for inspecting
     /// key groups (like @any, @digit) during Key Group Capturing.
