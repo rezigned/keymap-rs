@@ -8,7 +8,7 @@
 //! The main goal is to decouple application logic from backend-specific input handling, enabling easier
 //! testing, configuration, and cross-platform support.
 
-use keymap_parser::{parser::ParseError, Node};
+use keymap_parser::{node::Key, parser::ParseError, Node};
 
 /// A type alias for a parsed keymap node tree.
 ///
@@ -61,6 +61,72 @@ pub trait ToKeyMap {
     /// Returns an [`Error`] if conversion fails due to unsupported or invalid keys.
     fn to_keymap(&self) -> Result<KeyMap, Error>;
 }
+
+/// A trait for types that can be extracted from a matched key group node.
+///
+/// When a variant field is bound via a key group (e.g. `@digit`, `@any`), the
+/// derive macro calls `KeyGroupValue::from_keymap_node` on the matched [`KeyMap`]
+/// node to produce the field value. This replaces the old string-based type
+/// inspection, so type aliases (e.g. `type Bar = u32`) work transparently as
+/// long as the underlying type implements this trait.
+///
+/// # Built-in implementations
+///
+/// | Type    | Behaviour                                                  |
+/// |---------|------------------------------------------------------------|
+/// | `char`  | Returns the matched character, or `'\0'` as the default.   |
+/// | `u8`    | Parses the digit character as a decimal number.            |
+/// | `u16`   | Same as `u8`, widened to `u16`.                            |
+/// | `u32`   | Same as `u8`, widened to `u32`.                            |
+/// | `u64`   | Same as `u8`, widened to `u64`.                            |
+/// | `usize` | Same as `u8`, widened to `usize`.                          |
+///
+/// # Example
+///
+/// ```ignore
+/// use keymap::KeyGroupValue;
+///
+/// type MyDigit = u32;
+///
+/// #[derive(keymap::KeyMap)]
+/// enum Action {
+///     #[key("@digit")]
+///     Count(MyDigit),   // works because u32 implements KeyGroupValue
+/// }
+/// ```
+pub trait KeyGroupValue: Default {
+    /// Extracts a value from the matched key node.
+    ///
+    /// Receives the [`KeyMap`] node that was matched by the key group pattern.
+    /// Returns `Self::default()` when the node does not carry a suitable value.
+    fn from_keymap_node(node: &KeyMap) -> Self;
+}
+
+impl KeyGroupValue for char {
+    fn from_keymap_node(node: &KeyMap) -> Self {
+        match node.key {
+            Key::Char(c) => c,
+            _ => '\0',
+        }
+    }
+}
+
+macro_rules! impl_key_group_value_uint {
+    ($($t:ty),+) => {
+        $(
+            impl KeyGroupValue for $t {
+                fn from_keymap_node(node: &KeyMap) -> Self {
+                    match node.key {
+                        Key::Char(c) => c.to_digit(10).unwrap_or(0) as $t,
+                        _ => 0,
+                    }
+                }
+            }
+        )+
+    };
+}
+
+impl_key_group_value_uint!(u8, u16, u32, u64, usize);
 
 /// Represents errors that can occur during keymap parsing or conversion.
 #[derive(Debug)]

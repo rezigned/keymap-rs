@@ -2,9 +2,8 @@
 
 // Re-exports
 pub use config::{Config, DerivedConfig, Item, KeyMapConfig};
-pub use keymap::{Error, FromKeyMap, IntoKeyMap, KeyMap, ToKeyMap};
-pub use keymap_parser::node;
-pub use keymap_parser::parser;
+pub use keymap::{Error, FromKeyMap, IntoKeyMap, KeyGroupValue, KeyMap, ToKeyMap};
+pub use keymap_parser::{node, parser};
 pub use matcher::Matcher;
 
 #[cfg(feature = "derive")]
