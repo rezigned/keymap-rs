@@ -1,5 +1,25 @@
 # Changelog
 
+## [1.0.0-rc.5](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.4...keymap_derive-v1.0.0-rc.5) (2026-04-25)
+
+
+### Features
+
+* **keymap_derive:** allow unsigned int types for [@digit](https://github.com/digit) key group binding ([3a831c1](https://github.com/rezigned/keymap-rs/commit/3a831c1604535587d6ac849b73c988306d11e671))
+
+
+### Bug Fixes
+
+* #[key(ignore)] should not require Default trait ([ed81bdf](https://github.com/rezigned/keymap-rs/commit/ed81bdfab1aef7152d708f0639d48794e3862dc9))
+* use correct keymap_parser path in derive macro ([c18ef35](https://github.com/rezigned/keymap-rs/commit/c18ef35b25355cbbb127d31fb9d9856b8daadd6a))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * keymap_parser bumped from 1.0.0-rc.4 to 1.0.0-rc.5
+
 ## [1.0.0-rc.4](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.3...keymap_derive-v1.0.0-rc.4) (2026-02-22)
 
 

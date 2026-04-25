@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.0-rc.5](https://github.com/rezigned/keymap-rs/compare/keymap_parser-v1.0.0-rc.4...keymap_parser-v1.0.0-rc.5) (2026-04-25)
+
+
+### Features
+
+* **keymap_derive:** allow unsigned int types for [@digit](https://github.com/digit) key group binding ([3a831c1](https://github.com/rezigned/keymap-rs/commit/3a831c1604535587d6ac849b73c988306d11e671))
+
 ## [1.0.0-rc.4](https://github.com/rezigned/keymap-rs/compare/keymap_parser-v1.0.0-rc.3...keymap_parser-v1.0.0-rc.4) (2026-02-22)
 
 
