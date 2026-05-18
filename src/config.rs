@@ -240,12 +240,10 @@ impl<T> Deref for DerivedConfig<T> {
 /// # Example
 ///
 /// ```ignore
-/// let item = Item {
-///     keys: vec!["a".into(), "b c".into()],
-///     description: "Some command".into(),
-/// };
+/// let item = Item::new(vec!["a".into(), "b c".into()], "Some command".into());
 /// ```
 #[derive(Debug, Deserialize, PartialEq)]
+#[serde(from = "ItemRaw")]
 pub struct Item {
     /// A collection of key expressions. Each expression will be run through
     /// `keymap_parser::parse_seq`, so special notations like `@digit` or
@@ -253,8 +251,36 @@ pub struct Item {
     pub keys: Vec<String>,
 
     /// A short description for display or documentation purposes.
-    #[serde(default)]
     pub description: String,
+
+    /// A short key symbol or shortcut representation for the user interface (e.g. `^B`).
+    pub symbol: Option<String>,
+
+    /// A short help description of the binding (e.g. `jump`).
+    pub help: Option<String>,
+}
+
+/// Raw deserialization target — Serde deserializes into this first,
+/// then [`From<ItemRaw>`] converts it into [`Item`] with fallback logic.
+#[derive(Deserialize)]
+struct ItemRaw {
+    keys: Vec<String>,
+    #[serde(default)]
+    description: String,
+    symbol: Option<String>,
+    help: Option<String>,
+}
+
+impl From<ItemRaw> for Item {
+    fn from(raw: ItemRaw) -> Self {
+        let symbol = raw.symbol.or_else(|| raw.keys.first().cloned());
+        Self {
+            keys: raw.keys,
+            description: raw.description,
+            symbol,
+            help: raw.help,
+        }
+    }
 }
 
 impl<T> Config<T> {
@@ -439,7 +465,7 @@ impl<T> Config<T> {
 }
 
 impl Item {
-    /// Create a new `Item` with the given list of key expressions and a
+    /// Creates a new `Item` with the given list of key expressions and a
     /// description.
     ///
     /// # Parameters
@@ -454,7 +480,25 @@ impl Item {
     /// let item = Item::new(vec!["c".into(), "x y".into()], "Some command".into());
     /// ```
     pub fn new(keys: Vec<String>, description: String) -> Self {
-        Self { keys, description }
+        let symbol = keys.first().cloned();
+        Self {
+            keys,
+            description,
+            symbol,
+            help: None,
+        }
+    }
+
+    /// Sets a custom key symbol for display.
+    pub fn with_symbol<S: Into<String>>(mut self, symbol: Option<S>) -> Self {
+        self.symbol = symbol.map(Into::into);
+        self
+    }
+
+    /// Sets a custom help text.
+    pub fn with_help<S: Into<String>>(mut self, help: Option<S>) -> Self {
+        self.help = help.map(Into::into);
+        self
     }
 }
 
@@ -575,6 +619,9 @@ where
                         // Override the default Item if the key matches
                         if item.description.is_empty() {
                             item.description = config.items[pos].1.description.clone();
+                        }
+                        if item.help.is_none() {
+                            item.help = config.items[pos].1.help.clone();
                         }
                         config.items[pos].1 = item;
                     } else {

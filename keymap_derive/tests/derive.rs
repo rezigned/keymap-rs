@@ -44,6 +44,20 @@ enum IgnoreTest {
     IgnoredWithData(NoDefault),
 }
 
+#[allow(dead_code)]
+#[derive(Debug, PartialEq, Eq, keymap_derive::KeyMap, Clone)]
+enum CustomSymbolTest {
+    /// Active item with custom symbol and help
+    #[key("ctrl-b", symbol = "^B", help = "jump over obstacles")]
+    Active,
+    /// Active item with help but no symbol (falls back to ctrl-b)
+    #[key("ctrl-b", help = "do jump")]
+    FallbackSymbol,
+    /// Active item with no symbol or help (falls back to ctrl-b)
+    #[key("ctrl-b")]
+    NoSymbolOrHelp,
+}
+
 #[cfg(test)]
 mod tests {
     use keymap_dev::{Error, Item, KeyMap, KeyMapConfig, ToKeyMap};
@@ -212,5 +226,25 @@ mod tests {
             .items
             .iter()
             .any(|(v, _)| matches!(v, IgnoreTest::IgnoredWithData(_))));
+    }
+
+    #[test]
+    fn test_custom_symbol_and_help() {
+        let config = CustomSymbolTest::keymap_config();
+
+        // 1. symbol and help both specified
+        let (_, item1) = &config.items[0];
+        assert_eq!(item1.symbol.as_deref(), Some("^B"));
+        assert_eq!(item1.help.as_deref(), Some("jump over obstacles"));
+
+        // 2. help specified, symbol omitted (should fallback to "ctrl-b")
+        let (_, item2) = &config.items[1];
+        assert_eq!(item2.symbol.as_deref(), Some("ctrl-b"));
+        assert_eq!(item2.help.as_deref(), Some("do jump"));
+
+        // 3. both symbol and help omitted (should fallback to "ctrl-b" and None)
+        let (_, item3) = &config.items[2];
+        assert_eq!(item3.symbol.as_deref(), Some("ctrl-b"));
+        assert_eq!(item3.help.as_deref(), None);
     }
 }

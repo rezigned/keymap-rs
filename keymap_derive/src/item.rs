@@ -1,5 +1,5 @@
 use keymap_parser::{parse_seq, Node};
-use syn::{punctuated::Punctuated, token::Comma, Attribute, LitStr, Token, Variant};
+use syn::{punctuated::Punctuated, spanned::Spanned, token::Comma, Token, Variant};
 
 /// An attribute path name #[key(...)]
 const KEY_IDENT: &str = "key";
@@ -14,18 +14,119 @@ pub(crate) struct Item<'a> {
     pub nodes: Vec<Vec<Node>>,
     pub ignore: bool,
     pub description: String,
+    pub symbol: Option<String>,
+    pub help: Option<String>,
+}
+
+/// Helper struct representing the arguments parsed from a `#[key(...)]` attribute.
+///
+/// It supports a hybrid syntax:
+/// 1. Positional string literals (e.g. `"ctrl-b"`, `"space"`), which represent the keys to bind.
+/// 2. The `ignore` boolean flag (e.g. `#[key(ignore)]`).
+/// 3. Named name-value fields:
+///    - `symbol = "..."` (e.g. `symbol = "^B"`) defining a custom quick visual symbol for display.
+///    - `help = "..."` (e.g. `help = "jump"`) defining a short help text description for the binding.
+///
+/// Example:
+///
+/// #[key("ctrl-b", symbol = "^B", help = "jump")]
+///    |  |______|  |__________|   |___________|
+///  path   keys       symbol           help
+struct KeyAttrArgs {
+    keys: Vec<String>,
+    ignore: bool,
+    symbol: Option<String>,
+    help: Option<String>,
+}
+
+impl syn::parse::Parse for KeyAttrArgs {
+    fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
+        let mut keys = Vec::new();
+        let mut ignore = false;
+        let mut symbol = None;
+        let mut help = None;
+
+        while !input.is_empty() {
+            if input.peek(syn::LitStr) {
+                // Parse positional key bindings like "ctrl-b"
+                let lit: syn::LitStr = input.parse()?;
+                keys.push(lit.value());
+            } else if input.peek(syn::Ident) {
+                let ident: syn::Ident = input.parse()?;
+                if ident == "ignore" {
+                    // Parse the single 'ignore' flag
+                    ignore = true;
+                } else if ident == "symbol" {
+                    // Parse 'symbol = "..."'
+                    let _: Token![=] = input.parse()?;
+                    let lit: syn::LitStr = input.parse()?;
+                    symbol = Some(lit.value());
+                } else if ident == "help" {
+                    // Parse 'help = "..."'
+                    let _: Token![=] = input.parse()?;
+                    let lit: syn::LitStr = input.parse()?;
+                    help = Some(lit.value());
+                } else {
+                    return Err(syn::Error::new(
+                        ident.span(),
+                        format!("Unknown key attribute argument: {}", ident),
+                    ));
+                }
+            } else {
+                return Err(syn::Error::new(
+                    input.span(),
+                    "Expected string literal or identifier",
+                ));
+            }
+
+            // Consume optional comma separator if there are remaining arguments
+            if !input.is_empty() {
+                let _: Token![,] = input.parse()?;
+            }
+        }
+
+        Ok(KeyAttrArgs {
+            keys,
+            ignore,
+            symbol,
+            help,
+        })
+    }
 }
 
 pub(crate) fn parse_items(
     variants: &Punctuated<Variant, Comma>,
 ) -> Result<Vec<Item<'_>>, syn::Error> {
-    // NOTE: All variants are parsed, even those without the #[key(...)] attribute.
-    // This allows the deserializer to override keys and descriptions for variants that don't define them explicitly.
     variants
         .iter()
         .map(|variant| {
-            let ignore = parse_ignore(variant);
-            let (keys, nodes) = parse_keys(variant, ignore)?;
+            let mut keys = Vec::new();
+            let mut nodes = Vec::new();
+            let mut ignore = false;
+            let mut symbol = None;
+            let mut help = None;
+
+            for attr in &variant.attrs {
+                if attr.path().is_ident(KEY_IDENT) {
+                    let args: KeyAttrArgs = attr.parse_args()?;
+                    if args.ignore {
+                        ignore = true;
+                    }
+                    for key in args.keys {
+                        let seq = parse_seq(&key).map_err(|e| {
+                            syn::Error::new(attr.span(), format!("Invalid key \"{key}\": {e}"))
+                        })?;
+                        keys.push(key);
+                        nodes.push(seq);
+                    }
+                    if args.symbol.is_some() {
+                        symbol = args.symbol;
+                    }
+                    if args.help.is_some() {
+                        help = args.help;
+                    }
+                }
+            }
 
             Ok(Item {
                 variant,
@@ -33,23 +134,11 @@ pub(crate) fn parse_items(
                 description: parse_doc(variant),
                 keys,
                 nodes,
+                symbol,
+                help,
             })
         })
         .collect()
-}
-
-fn parse_ignore(variant: &Variant) -> bool {
-    variant.attrs.iter().any(|attr| {
-        let mut ignore = false;
-        if attr.path().is_ident(KEY_IDENT) {
-            let _ = attr.parse_nested_meta(|meta| {
-                ignore = meta.path.is_ident("ignore");
-                Ok(())
-            });
-        }
-
-        ignore
-    })
 }
 
 fn parse_doc(variant: &Variant) -> String {
@@ -69,40 +158,4 @@ fn parse_doc(variant: &Variant) -> String {
         })
         .collect::<Vec<_>>()
         .join("\n")
-}
-
-/// Parse attribute arguments.
-///
-/// Example:
-///
-/// #[key("a", "g g")]
-///    |  |________|
-///  path   (args)
-fn parse_args(attr: &Attribute) -> syn::Result<Punctuated<LitStr, Token![,]>> {
-    attr.parse_args_with(Punctuated::<LitStr, Token![,]>::parse_separated_nonempty)
-}
-
-fn parse_keys(variant: &Variant, ignore: bool) -> syn::Result<(Vec<String>, Vec<Vec<Node>>)> {
-    let mut keys = Vec::new();
-    let mut nodes = Vec::new();
-
-    for attr in &variant.attrs {
-        if !attr.path().is_ident(KEY_IDENT) || ignore {
-            continue;
-        }
-
-        // Collect arguments
-        //
-        // e.g. [["a"], ["g g"]]
-        for arg in parse_args(attr)? {
-            let val = arg.value();
-            let seq = parse_seq(&val)
-                .map_err(|e| syn::Error::new(arg.span(), format!("Invalid key \"{val}\": {e}")))?;
-
-            keys.push(val);
-            nodes.push(seq);
-        }
-    }
-
-    Ok((keys, nodes))
 }
