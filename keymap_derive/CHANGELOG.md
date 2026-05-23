@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-rc.6](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.5...keymap_derive-v1.0.0-rc.6) (2026-05-23)
+
+
+### Features
+
+* **keymap_derive:** support custom key symbols and help messages ([#41](https://github.com/rezigned/keymap-rs/issues/41)) ([8e5ad6f](https://github.com/rezigned/keymap-rs/commit/8e5ad6ff721fb9f9c46aa81a00ac927f6bf3a553))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * keymap_parser bumped from 1.0.0-rc.5 to 1.0.0-rc.6
+
 ## [1.0.0-rc.5](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.4...keymap_derive-v1.0.0-rc.5) (2026-04-25)
 
 
