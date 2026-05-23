@@ -128,6 +128,39 @@ canvas {
 #share-button:hover {
   background-color: #282828;
 }
+#keybindings-info {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 16px;
+  padding: 8px 12px;
+  background: #1a1a2e;
+  border-top: 2px solid #333;
+  font-family: 'Silkscreen', cursive;
+  font-size: 12px;
+}
+.keybinding-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(50% - 8px);
+  padding: 2px 0;
+}
+.keybinding-symbol {
+  color: #ffd93d;
+  font-weight: 700;
+  min-width: 24px;
+  text-align: center;
+}
+.keybinding-help {
+  color: #ccc;
+  flex-shrink: 0;
+  font-size: 12px;
+}
+.keybinding-keys {
+  color: #6b7280;
+  font-size: 10px;
+  margin-left: auto;
+}
 .rainbow {
   font-family: 'Press Start 2P', cursive;
   animation: rainbowColors 4s linear infinite;

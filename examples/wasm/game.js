@@ -470,7 +470,8 @@ class Game {
     this.gameSpeed = CONFIG.GAME.INITIAL_SPEED;
     this.gameOver = false;
     this.paused = false;
-    this.key = "";
+    this.symbol = "";
+    this.help = "";
 
     // Delta time approach instead of frame limiting
     this.lastTime = 0;
@@ -501,7 +502,8 @@ class Game {
     this.gameSpeed = CONFIG.GAME.INITIAL_SPEED;
     this.gameOver = false;
     this.paused = false;
-    this.key = "";
+    this.symbol = "";
+    this.help = "";
     this._hideGameOverUI();
     this.accumulator = 0; // Ensure game logic runs on first frame after reset
 
@@ -512,11 +514,9 @@ class Game {
     });
   }
 
-  setKey(key, desc) {
-    this.key = [key, desc]
-      .filter(Boolean)
-      .map((s) => s.toLowerCase())
-      .join(" - ");
+  setKey(symbol = "", help = "") {
+    this.symbol = symbol;
+    this.help = help;
   }
 
   togglePause() {
@@ -551,14 +551,13 @@ class Game {
   }
 
   _drawKey() {
-    let fontSize = 10;
-    ctx.fillStyle = "#ccc";
-    ctx.font = `${fontSize}px "${CONFIG.GAME.FONT_FACE}"`;
     ctx.textAlign = "center";
+    ctx.fillStyle = "#ccc";
+    ctx.font = `10px "${CONFIG.GAME.FONT_FACE}"`;
     ctx.fillText(
-      this.key,
+      [this.symbol, this.help].filter(Boolean).join(" "),
       canvas.width / 2,
-      GROUND_Y + CONFIG.GROUND_HEIGHT - (CONFIG.GROUND_HEIGHT - fontSize) / 2,
+      GROUND_Y + CONFIG.GROUND_HEIGHT - (CONFIG.GROUND_HEIGHT - 10) / 2,
     );
   }
 
@@ -693,17 +692,30 @@ export function pauseGame() {
   }
 }
 
-export function setKey(key, description) {
-  game.setKey(key, description);
+export function setKey(key, description, symbol, help) {
+  game.setKey(key, description, symbol, help);
 }
 
-export function setSkin(c) {
-  // Handle char code or string character
-  const char = typeof c === 'number' ? String.fromCharCode(c) : c;
-  const digit = parseInt(char);
-  if (isNaN(digit)) return;
+export function renderKeybindings(info) {
+  const data = JSON.parse(info);
+  const container = document.getElementById("keybindings-info");
+  if (!container) return;
 
-  // Change rainbow trail colors based on digit
+  container.innerHTML = data
+    .map((entry) => {
+      const keys = entry.keys.join(", ");
+      const sym = entry.symbol || keys || "";
+      const help = entry.help || "";
+      return `<div class="keybinding-row">
+        <span class="keybinding-symbol">${sym}</span>
+        <span class="keybinding-help">${help}</span>
+        <span class="keybinding-keys">${keys}</span>
+      </div>`;
+    })
+    .join("");
+}
+
+export function setSkin(digit) {
   const baseHue = (digit * 36) % 360;
   game.rainbowTrail.colors = Array.from({ length: 6 }, (_, i) => {
     return `hsl(${(baseHue + i * 20) % 360}, 100%, 50%)`;

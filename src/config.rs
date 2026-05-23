@@ -623,6 +623,9 @@ where
                         if item.help.is_none() {
                             item.help = config.items[pos].1.help.clone();
                         }
+                        if item.symbol.is_none() && item.keys == config.items[pos].1.keys {
+                            item.symbol = config.items[pos].1.symbol.clone();
+                        }
                         config.items[pos].1 = item;
                     } else {
                         // Append a new entry
