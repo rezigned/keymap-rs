@@ -187,6 +187,15 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
                 }
             };
 
+            let symbol_opt = match &item.symbol {
+                Some(sym) => quote! { .with_symbol(Some(#sym)) },
+                None => quote! {},
+            };
+            let help_opt = match &item.help {
+                Some(h) => quote! { .with_help(Some(#h)) },
+                None => quote! {},
+            };
+
             match_arms_deserialize.push(quote! {
                 #variant_name_str => Ok(#variant_expr_default),
             });
@@ -194,7 +203,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
                 #variant_pat => ::keymap::Item::new(
                     vec![#(#keys),*],
                     #doc.to_string()
-                ),
+                ) #symbol_opt #help_opt,
             });
 
             entries.push(quote! {
@@ -203,7 +212,7 @@ fn impl_keymap_config(name: &Ident, items: &Vec<Item>) -> proc_macro2::TokenStre
                     ::keymap::Item::new(
                         vec![#(#keys),*],
                         #doc.to_string()
-                    )
+                    ) #symbol_opt #help_opt
                 ),
             });
         }

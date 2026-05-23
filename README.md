@@ -28,6 +28,7 @@
 * ⌨️ **Key Patterns**: Supports single keys (`a`), combinations (`ctrl-b`), and multi-key sequences (`ctrl-b n`).
 * 🧠 **Key Groups**: Use built-in pattern matching for common key groups (`@upper`, `@lower`, `@alpha`, `@alnum`, and `@any`).
 * 📸 **Key Group Capturing**: Capture specific keypress data (like the actual `char` from `@any` or `@digit`) directly into your action enum variants at runtime.
+* 🏷️ **Custom Symbols & Help**: Define custom display symbols (e.g., `^B`) and help text for key bindings.
 * 🧬 **Compile-Time Safety**: The `keymap_derive` macro validates key syntax at compile time, preventing runtime errors.
 * 🌐 **Backend-Agnostic**: Works with multiple backends, including `crossterm`, `termion`, and `wasm`.
 * 🪶 **Lightweight & Extensible**: Designed to be minimal and easy to extend with new backends or features.
@@ -95,8 +96,8 @@ pub enum Action {
     #[key("right", "l")]
     Right,
 
-    /// Jump.
-    #[key("space")]
+    /// Jump with custom key, display symbol and help text.
+    #[key("space", symbol = "␣", help = "jump over obstacles")]
     Jump,
 
     /// Key Group Capturing action (e.g. tracking which character was pressed).
@@ -119,7 +120,8 @@ let config = Action::keymap_config();
 match config.get(&key) {
     Some(action) => match action {
         Action::Quit => break,
-        Action::Jump => println!("Jump!"),
+        Action::Jump => println!("Jump! Symbol: {:?}, Help: {:?}",
+                                 action.keymap_item().symbol, action.keymap_item().help),
         _ => println!("Action: {action:?} - {}", action.keymap_item().description),
     }
     _ => {}
@@ -241,6 +243,8 @@ assert_eq!(
 | **Key Combinations** | Keys pressed simultaneously with modifiers (Ctrl, Alt, Shift). | `ctrl-c`, `alt-f4`, `ctrl-alt-shift-f1` |
 | **Key Sequences** | Multiple keys pressed in order. | `g g` (press `g` twice), `ctrl-b n` (Ctrl+B, then N), `ctrl-b c` (tmux-style new window) |
 | **Key Groups** | Predefined patterns matching sets of keys. | `@upper` (A-Z), `@alpha` (A-Z, a-z), `@any` (any key) |
+| **Custom Symbols** | Custom display symbols for key bindings (e.g., for UI display). | `symbol = "^B"` |
+| **Help Text** | Short help descriptions for key bindings. | `help = "jump"` |
 
 **Examples in Configuration:**
 ```toml

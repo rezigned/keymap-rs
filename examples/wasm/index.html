@@ -33,39 +33,44 @@
       <div id="game-over">GAME OVER!</div>
       <button id="restart-button">Restart</button>
       <button id="share-button">Share on X</button>
+      <div id="keybindings-info"></div>
     </div>
     <h4>EXAMPLE: Derive Macro</h4>
     <p>
       Define an enum and automatically derive key bindings using the <code>#[derive(KeyMap)]</code> macro.
     </p>
-    <pre><code class="language-rust">#[derive(keymap::KeyMap, Hash, PartialEq, Eq, Clone)]
+    <pre><code class="language-rust">#[derive(Debug, Clone, keymap::KeyMap, Hash, PartialEq, Eq)]
 pub enum Action {
   /// Jump over obstacles
-  #[key("space")]
+  #[key("space", symbol = "↑", help = "jump")] // symbol gets overridden by toml config
   Jump,
 
   /// Move leftward
-  #[key("left")]
+  #[key("left", help = "move left")]
   Left,
 
   /// Move rightward
-  #[key("right")]
+  #[key("right", help = "move right")]
   Right,
 
-  /// Select a skin (Key Group Capturing!)
-  #[key("@digit")]
-  SelectSkin(char),
+  /// Pause
+  #[key("p", help = "pause")]
+  Pause,
 
   /// Restart
-  #[key("q", "esc")]
+  #[key("q", "esc", help = "quit")]
   Quit,
+
+  /// Select a skin
+  #[key("@digit", symbol = "0-9", help = "select skin")]
+  SelectSkin(u8),
 }</code></pre>
     <h4>EXAMPLE: Key Override</h4>
     <p>
       Customize or extend key bindings through configuration files without changing the source code.
     </p>
     <pre><code class="language-yaml"># Now both 'space' and the 'up' arrow can be used to jump
-Jump = { keys = ["space", "up"], description = "Jump Jump!" }
+Jump = { keys = ["space", "up"], symbol = "␣", help = "jump", description = "Jump Jump!" }
 </code></pre>
     <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/highlight.min.js" defer></script>
     <script src="https://unpkg.com/@highlightjs/cdn-assets@11.11.1/languages/rust.min.js" defer></script>

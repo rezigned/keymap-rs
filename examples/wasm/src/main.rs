@@ -12,50 +12,67 @@ extern "C" {
     fn isGameOver() -> bool;
     fn resetGame();
     fn pauseGame();
-    fn setKey(key: String, desc: String);
-    fn setSkin(c: char);
+    fn setKey(key: String, desc: String, symbol: String, help: String);
+    fn setSkin(digit: u8);
+    fn renderKeybindings(info: String);
 }
 
 #[derive(Debug, Clone, keymap::KeyMap, Hash, PartialEq, Eq)]
 pub enum Action {
     /// Jump over obstacles
-    #[key("space")]
+    #[key("space", symbol = "↑", help = "jump")] // symbol gets overridden by toml config
     Jump,
 
     /// Move leftward
-    #[key("left")]
+    #[key("left", help = "move left")]
     Left,
 
     /// Move rightward
-    #[key("right")]
+    #[key("right", help = "move right")]
     Right,
 
     /// Pause
-    #[key("p")]
+    #[key("p", help = "pause")]
     Pause,
 
     /// Restart
-    #[key("q", "esc")]
+    #[key("q", "esc", help = "quit")]
     Quit,
 
     /// Select a skin
-    #[key("@digit")]
-    SelectSkin(char),
+    #[key("@digit", symbol = "0-9", help = "select skin")]
+    SelectSkin(u8),
 }
 
 /// Overrides the default keymap
 #[allow(unused)]
 pub const DERIVED_CONFIG: &str = r#"
-Jump = { keys = ["space", "up"], description = "Jump Jump!" }
-Quit = { keys = ["q", "esc"], description = "Quit!" }
-Left = { keys = ["left", "alt-l"], description = "Move Left" }
-Right = { keys = ["right", "alt-r"], description = "Move Right" }
-SelectSkin = { keys = ["@digit"], description = "Select a skin" }
+Jump = { keys = ["space", "up"], symbol = "␣", help = "jump", description = "Jump Jump!" }
+Quit = { keys = ["q", "esc"], symbol = "↩", help = "quit", description = "Quit!" }
+Left = { keys = ["left", "alt-l"], symbol = "←", help = "move left", description = "Move Left" }
+Right = { keys = ["right", "alt-r"], symbol = "→", help = "move right", description = "Move Right" }
+SelectSkin = { keys = ["@digit"], symbol = "0-9", help = "select skin", description = "Select a skin" }
 "#;
 
 #[allow(unused)]
 pub fn derived_config() -> DerivedConfig<Action> {
     toml::from_str(DERIVED_CONFIG).unwrap()
+}
+
+fn json_escape(s: &str) -> String {
+    let mut buf = String::with_capacity(s.len());
+    for c in s.chars() {
+        match c {
+            '"' => buf.push_str("\\\""),
+            '\\' => buf.push_str("\\\\"),
+            '\n' => buf.push_str("\\n"),
+            '\r' => buf.push_str("\\r"),
+            '\t' => buf.push_str("\\t"),
+            c if c.is_control() => buf.push_str(&format!("\\u{:04x}", c as u32)),
+            c => buf.push(c),
+        }
+    }
+    buf
 }
 
 #[wasm_bindgen]
@@ -65,13 +82,14 @@ pub fn get_keymap_as_json() -> String {
         .items
         .iter()
         .map(|(action, entry)| {
-            let keys: Vec<String> = entry.keys.iter().map(|k| format!("\"{}\"", k)).collect();
-            let description = entry.description.clone();
+            let keys: Vec<String> = entry.keys.iter().map(|k| format!("\"{}\"", json_escape(k))).collect();
+            let description = json_escape(&entry.description);
+            let symbol = json_escape(entry.symbol.as_deref().unwrap_or_default());
+            let help = json_escape(entry.help.as_deref().unwrap_or_default());
+            let action_str = json_escape(&format!("{:?}", action));
             format!(
-                "{{ \"action\": \"{:?}\", \"keys\": [{}], \"description\": \"{}\" }}",
-                action,
+                "{{ \"action\": \"{action_str}\", \"keys\": [{}], \"description\": \"{description}\", \"symbol\": \"{symbol}\", \"help\": \"{help}\" }}",
                 keys.join(","),
-                description
             )
         })
         .collect();
@@ -99,6 +117,7 @@ pub fn main() {
     on_keydown.forget();
     on_keyup.forget();
 
+    renderKeybindings(get_keymap_as_json());
     resetGame();
 }
 
@@ -110,11 +129,19 @@ pub fn handle_key_event(event: &KeyboardEvent, is_keydown: bool) {
     if is_keydown {
         let key = event.to_keymap().unwrap();
         let mut desc = String::new();
+        let mut symbol = String::new();
+        let mut help = String::new();
         if let Some((_, item)) = config.get_item(event) {
             desc = item.description.clone();
+            if item.keys.iter().any(|k| k.starts_with('@')) {
+                symbol = key.to_string();
+            } else {
+                symbol = item.symbol.clone().unwrap_or_default();
+            }
+            help = item.help.clone().unwrap_or_default();
         };
 
-        setKey(key.to_string(), desc);
+        setKey(key.to_string(), desc, symbol, help);
     }
 
     // Use .get_bound() to support Key Group Capturing for SelectSkin
@@ -128,7 +155,6 @@ pub fn handle_key_event(event: &KeyboardEvent, is_keydown: bool) {
             Action::SelectSkin(c) => {
                 if is_keydown {
                     setSkin(c);
-                    setKey(format!("Skin selected: {c}"), "Key Group Capturing!".to_string());
                 }
             }
             _ if !is_game_over => match action {
