@@ -20,15 +20,15 @@ extern "C" {
 #[derive(Debug, Clone, keymap::KeyMap, Hash, PartialEq, Eq)]
 pub enum Action {
     /// Jump over obstacles
-    #[key("space", symbol = "↑", help = "jump")] // symbol gets overridden by toml config
+    #[key("space", symbol = "␣", help = "jump")] // symbol gets overridden by toml config
     Jump,
 
     /// Move leftward
-    #[key("left", help = "move left")]
+    #[key("left", symbol = "←", help = "move left")]
     Left,
 
     /// Move rightward
-    #[key("right", help = "move right")]
+    #[key("right", symbol = "→", help = "move right")]
     Right,
 
     /// Pause

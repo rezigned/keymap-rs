@@ -12,13 +12,23 @@ where
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode()?;
 
+    write!(stdout, "{}", termion::cursor::Save)?;
+    stdout.flush()?;
+
     for key in stdin.keys() {
+        write!(
+            stdout,
+            "{}{}",
+            termion::cursor::Restore,
+            termion::clear::AfterCursor,
+        )?;
+
         let quit = f(key.unwrap());
+        stdout.flush()?;
+
         if quit {
             break;
         }
-
-        stdout.flush().unwrap();
     }
 
     write!(stdout, "{}", termion::cursor::Show)
