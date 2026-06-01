@@ -32,6 +32,10 @@ Shows how to load key mappings exclusively from external configuration files, ig
 
 Explores combining derive macro defaults with external configuration overrides, covering configuration precedence and key group patterns like `@digit`.
 
+### [`capturing.rs`](./capturing.rs)
+**Key group capturing using `.get_bound()`**
+
+Demonstrates dynamic key capture with key group patterns like `@any`, `@digit`, `@alpha`, etc. The `Shoot(char)` variant captures the actual pressed character at runtime via `.get_bound()`.
 
 ### [`modes.rs`](./modes.rs)
 **Multi-mode application with different key mappings**
@@ -42,6 +46,11 @@ Illustrates building applications with multiple modes (like `vim`), where differ
 **Key sequences and timing**
 
 Explains how to handle multi-key sequences (like `j j` for double-tap actions), including sequence detection, timing-based handling, and sequence timeout management.
+
+### [`reload.rs`](./reload.rs)
+**Runtime keymap reload**
+
+Demonstrates swapping key bindings at runtime by re-deserializing a `DerivedConfig<T>` from inline TOML configs. Press `r` to rotate between predefined configuration sets.
 
 ---
 

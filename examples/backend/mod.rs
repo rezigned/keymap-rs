@@ -1,3 +1,5 @@
+use std::io::Write;
+
 use keymap::Item;
 
 #[cfg(feature = "crossterm")]
@@ -32,28 +34,41 @@ pub(crate) use mock::{run, Key};
 
 #[allow(dead_code)]
 pub(crate) fn print(s: &str) -> bool {
-    println!("{s}\r");
+    print!("\r{s}");
+    std::io::stdout().flush().ok();
     false
 }
 
 #[allow(dead_code)]
 pub(crate) fn quit(s: &str) -> bool {
     println!("{s}\r");
+    std::io::stdout().flush().ok();
     true
 }
 
+// ANSI colors
+const RESET: &str = "\x1b[0m";
+const COLOR_DIM: &str = "\x1b[38;2;68;72;85m";
+const COLOR_KEY: &str = "\x1b[38;2;148;226;213m";
+const COLOR_TEXT: &str = "\x1b[38;2;166;173;200m";
+
 #[allow(dead_code)]
 pub(crate) fn print_config<T: std::fmt::Debug>(items: &[(T, Item)]) {
-    println!("--- keymap ---");
+    let keys = items
+        .iter()
+        .map(|(_, v)| {
+            format!(
+                "{COLOR_KEY}{}{RESET} {COLOR_TEXT}{}{RESET}",
+                v.symbol.clone().unwrap_or_default(),
+                v.help.clone().unwrap_or(v.description.clone())
+            )
+        })
+        .collect::<Vec<_>>()
+        .join(&format!(" {COLOR_DIM}|{RESET} "));
 
-    items.iter().for_each(|(action, v)| {
-        println!(
-            "{action:?} = keys: {:?}, description: {}",
-            v.keys, v.description
-        )
-    });
-
-    println!("--------------");
+    println!("\r{keys}");
+    std::io::stdout().flush().ok();
 }
+
 #[allow(unused)]
 fn main() {}

@@ -4,7 +4,7 @@ mod backend;
 #[path = "./action.rs"]
 mod action;
 
-use crate::backend::{print, quit, run};
+use crate::backend::{print, print_config, quit, run};
 use action::Action;
 use keymap::{DerivedConfig, KeyMapConfig};
 
@@ -16,11 +16,9 @@ Jump = { keys = ["j"], description = "Jump!" }
 
 fn main() -> std::io::Result<()> {
     println!("# Example: Key Group Capturing using .get_bound()");
-    println!("- Press any key to see it captured by Action::Shoot(char)");
-    println!("- Press 'j' to see Action::Jump (unit variant)");
-    println!("- Press 'q' or 'esc' to quit");
 
     let config: DerivedConfig<Action> = toml::from_str(CONFIG).unwrap();
+    print_config(&config.items);
 
     run(|key| match config.get_bound(&key) {
         Some(action) => match action {

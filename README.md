@@ -58,6 +58,23 @@ See `keymap-rs` in action with the [WASM example](https://rezigned.com/keymap-rs
   </tbody>
 </table>
 
+<p align="center">
+  <table align="center">
+    <thead>
+      <tr>
+        <th width="500px">Runtime Reload (Rebind keys at runtime)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td align="center">
+          <img src="./examples/reload.gif" alt="Runtime keymap reload demo"/>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</p>
+
 ---
 
 ## 📦 Installation
@@ -120,8 +137,11 @@ let config = Action::keymap_config();
 match config.get(&key) {
     Some(action) => match action {
         Action::Quit => break,
-        Action::Jump => println!("Jump! Symbol: {:?}, Help: {:?}",
-                                 action.keymap_item().symbol, action.keymap_item().help),
+        Action::Jump => println!(
+            "Jump! Symbol: {:?}, Help: {:?}",
+            action.keymap_item().symbol,
+            action.keymap_item().help)
+        ),
         _ => println!("Action: {action:?} - {}", action.keymap_item().description),
     }
     _ => {}

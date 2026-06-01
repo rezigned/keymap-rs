@@ -4,7 +4,7 @@ mod backend;
 #[path = "./action.rs"]
 mod action;
 
-use crate::backend::{print, quit, run};
+use crate::backend::{print, print_config, quit, run};
 use action::Action;
 use keymap::{Config, KeyMapConfig};
 
@@ -18,6 +18,7 @@ fn main() -> std::io::Result<()> {
     println!("# Example: External configuration with Config<T>");
 
     let config: Config<Action> = toml::from_str(CONFIG).unwrap();
+    print_config(&config.items);
 
     // Use .get() for high-performance reference lookup of the "default" variant.
     // To capture the actual key pressed (e.g. the 'a' in @any), use .get_bound()

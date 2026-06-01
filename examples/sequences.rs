@@ -6,21 +6,25 @@ mod action;
 
 use std::time::{Duration, Instant};
 
-use crate::backend::{print, quit, run, Key};
+use crate::backend::{print, print_config, quit, run, Key};
 use action::Action;
 use keymap::{DerivedConfig, KeyMapConfig};
 
 // Override default key mapping defined via #[derive(KeyMap)] in Action.
 pub(crate) const CONFIG: &str = r#"
 Jump = { keys = ["j j"], description = "Jump Jump!" }
+Shoot = { keys = ["enter"] }
 "#;
 
 fn main() -> std::io::Result<()> {
     println!("# Example: Key Sequences (j j)");
+
     let config: DerivedConfig<Action> = toml::from_str(CONFIG).unwrap();
 
     let mut last_key: Option<Key> = None;
     let mut last_time = Instant::now();
+
+    print_config(&config.items);
 
     run(move |key| {
         let ret = match config.get(&key) {

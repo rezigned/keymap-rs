@@ -3,7 +3,7 @@ use std::collections::HashMap;
 #[path = "./backend/mod.rs"]
 mod backend;
 
-use crate::backend::{print, quit, run};
+use crate::backend::{print, print_config, quit, run};
 use keymap::DerivedConfig;
 use serde::Deserialize;
 
@@ -45,7 +45,11 @@ fn main() -> std::io::Result<()> {
     let mut mode = "home";
 
     println!("# Example: Multi-mode application with different key mappings");
-    println!("mode: {mode}\r");
+
+    if let Some(Actions::Home(config)) = modes.get("home") {
+        print_config(&config.items);
+    }
+    println!("\rmode: {mode}");
 
     run(move |key| match modes.get(mode).unwrap() {
         Actions::Home(config) => match config.get(&key) {

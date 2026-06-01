@@ -3,32 +3,31 @@
 #[derive(Debug, keymap::KeyMap, Hash, PartialEq, Eq, Clone)]
 pub(crate) enum Action {
     /// Jump over obstacles
-    #[key("space", "@digit")]
+    #[key("space", "@digit", symbol = "␣", help = "jump")]
     Jump,
 
     /// Climb or move up
-    #[key("up")]
+    #[key("up", symbol = "↑", help = "move up")]
     Up,
 
     /// Drop or crouch down
-    #[key("down")]
+    #[key("down", symbol = "↓", help = "move down")]
     Down,
 
     /// Move leftward
-    #[key("left")]
+    #[key("left", symbol = "←", help = "move left")]
     Left,
 
     /// Move rightward
-    #[key("right")]
+    #[key("right", symbol = "→", help = "move right")]
     Right,
 
     /// Exit or pause game
-    #[key("q", "esc")]
+    #[key("q", "esc", symbol = "esc", help = "quit")]
     Quit,
 
     /// Key Group Capturing action (e.g. tracking which character was pressed).
-    /// `char` will be captured from any matched key group macro (like `@any` or `@digit`) at runtime.
-    #[key("@any")]
+    #[key("@any", help = "shoot")]
     Shoot(char),
 }
 

@@ -35,6 +35,7 @@ esc    = "Quit"
 fn main() -> std::io::Result<()> {
     let config: Config = toml::from_str(CONFIG).unwrap();
     println!("# Example: Basic key mapping without derive macros");
+    println!("\r↑ up | ↓ down | ← left | → right | ␣/^G jump | q/esc quit");
 
     run(|key| {
         let Some((_, action)) = config.0.get_key_value(&key.to_keymap().unwrap()) else {
