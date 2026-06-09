@@ -66,6 +66,14 @@ mod tests {
 
     struct Wrapper(keymap_parser::Node);
 
+    fn wrap(s: &str) -> Vec<Wrapper> {
+        keymap_parser::parse_seq(s)
+            .unwrap()
+            .into_iter()
+            .map(Wrapper)
+            .collect()
+    }
+
     impl ToKeyMap for Wrapper {
         fn to_keymap(&self) -> Result<KeyMap, Error> {
             Ok(self.0.clone())
@@ -156,45 +164,28 @@ mod tests {
     fn test_bound_payload_extraction() {
         let config = Action::keymap_config();
 
-        // When we press '1', it matches @digit, and we should extract '1'
-        let keys = keymap_parser::parse_seq("1")
-            .unwrap()
-            .into_iter()
-            .map(Wrapper)
-            .collect::<Vec<_>>();
-        let bound_action = config.get_bound_seq(&keys).unwrap();
-        assert_eq!(bound_action, Action::Digit('1'));
+        [
+            ("1", Action::Digit('1')),
+            ("A", Action::Jump('A')),
+            ("enter", Action::Create),
+        ]
+        .into_iter()
+        .for_each(|(input, expected)| {
+            assert_eq!(expected, config.get_bound_seq(&wrap(input)).unwrap());
+        });
 
-        // When we press 'A', it matches @any, and we should extract 'A'
-        let keys = keymap_parser::parse_seq("A")
-            .unwrap()
-            .into_iter()
-            .map(Wrapper)
-            .collect::<Vec<_>>();
-        let bound_action = config.get_bound_seq(&keys).unwrap();
-
-        assert_eq!(bound_action, Action::Jump('A'));
-
-        // When we press 'Q', it matches @any, and we should extract 'Q'
-        let keys = keymap_parser::parse_seq("Q")
-            .unwrap()
-            .into_iter()
-            .map(Wrapper)
-            .collect::<Vec<_>>();
-        let nodes = keys.iter().map(|k| k.0.clone()).collect::<Vec<_>>();
+        // get_bound_item_by_keymaps also returns the item
+        let nodes = wrap("Q").into_iter().map(|w| w.0).collect::<Vec<_>>();
         let (bound_action, item) = config.get_bound_item_by_keymaps(&nodes).unwrap();
-
         assert_eq!(bound_action, Action::Jump('Q'));
         assert_eq!(item.description, "Jump with char argument");
 
-        // Standard keys should extract as well using get_bound_seq
-        let keys = keymap_parser::parse_seq("enter")
-            .unwrap()
-            .into_iter()
-            .map(Wrapper)
-            .collect::<Vec<_>>();
-        let bound_action = config.get_bound_seq(&keys).unwrap();
-        assert_eq!(bound_action, Action::Create);
+        // Key::Space extracted as ' ' via @any
+        let space = vec![Wrapper(keymap_parser::Node::new(
+            0,
+            keymap_parser::node::Key::Space,
+        ))];
+        assert_eq!(Action::Jump(' '), config.get_bound_seq(&space).unwrap());
     }
 
     #[test]
