@@ -106,6 +106,7 @@ impl KeyGroupValue for char {
     fn from_keymap_node(node: &KeyMap) -> Self {
         match node.key {
             Key::Char(c) => c,
+            Key::Space => ' ',
             _ => '\0',
         }
     }

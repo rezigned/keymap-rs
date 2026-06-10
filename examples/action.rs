@@ -7,19 +7,19 @@ pub(crate) enum Action {
     Jump,
 
     /// Climb or move up
-    #[key("up", symbol = "↑", help = "move up")]
+    #[key("up", symbol = "↑", help = "up")]
     Up,
 
     /// Drop or crouch down
-    #[key("down", symbol = "↓", help = "move down")]
+    #[key("down", symbol = "↓", help = "down")]
     Down,
 
     /// Move leftward
-    #[key("left", symbol = "←", help = "move left")]
+    #[key("left", symbol = "←", help = "left")]
     Left,
 
     /// Move rightward
-    #[key("right", symbol = "→", help = "move right")]
+    #[key("right", symbol = "→", help = "right")]
     Right,
 
     /// Exit or pause game
