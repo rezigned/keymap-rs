@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.0.0-rc.7](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.6...keymap_derive-v1.0.0-rc.7) (2026-06-10)
+
+
+### Bug Fixes
+
+* **keymap:** extract space char from Key::Space in KeyGroupValue ([#44](https://github.com/rezigned/keymap-rs/issues/44)) ([40cfdbb](https://github.com/rezigned/keymap-rs/commit/40cfdbba7290e210601a7bbe1e8cd428fe244443))
+
+
+### Dependencies
+
+* The following workspace dependencies were updated
+  * dependencies
+    * keymap_parser bumped from 1.0.0-rc.6 to 1.0.0-rc.7
+
 ## [1.0.0-rc.6](https://github.com/rezigned/keymap-rs/compare/keymap_derive-v1.0.0-rc.5...keymap_derive-v1.0.0-rc.6) (2026-05-23)
 
 
