@@ -15,7 +15,7 @@ proc-macro = true
 keymap_parser = { path = "../keymap_parser/", version = "1.0.0-rc.7" }
 proc-macro2 = "1.0.95"
 quote = "1.0.40"
-syn = "2.0.101"
+syn = "3.0.2"
 
 [dev-dependencies]
 # TODO: Find a proper way to fix dependency cycle in googleapis/release-please
