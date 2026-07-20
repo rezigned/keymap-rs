@@ -39,11 +39,11 @@
 
 See `keymap-rs` in action with the [WASM example](https://rezigned.com/keymap-rs/):
 
-<table>
+<table align="center">
   <thead>
     <tr>
       <th width="500px">Nyan Jump!</th>
-      <th width="500px">Tur - Turing Machine Language</th>
+      <th width="500px">Runtime Reload (Rebind keys at runtime)</th>
     </tr>
   </thead>
   <tbody>
@@ -52,7 +52,7 @@ See `keymap-rs` in action with the [WASM example](https://rezigned.com/keymap-rs
         <a href="https://rezigned.com/keymap-rs"><img src="./examples/wasm/public/preview.png" alt="keymap-rs WASM Demo"/></a>
       </td>
       <td>
-        <a href="https://rezigned.com/tur"><img src="https://rezigned.com/tur/tur-web.png" /></a>
+        <img src="./examples/reload.gif" alt="Runtime keymap reload demo"/>
       </td>
     </tr>
   </tbody>
@@ -62,13 +62,17 @@ See `keymap-rs` in action with the [WASM example](https://rezigned.com/keymap-rs
   <table align="center">
     <thead>
       <tr>
-        <th width="500px">Runtime Reload (Rebind keys at runtime)</th>
+        <th width="500px">Tur - Turing Machine Language</th>
+        <th width="500px">upmd - Run markdown interactively</th>
       </tr>
     </thead>
     <tbody>
       <tr>
         <td align="center">
-          <img src="./examples/reload.gif" alt="Runtime keymap reload demo"/>
+          <a href="https://rezigned.com/tur"><img src="https://rezigned.com/tur/tur-web.png" /></a>
+        </td>
+        <td align="center">
+          <a href="https://upmd.rezigned.com"><img src="https://upmd.rezigned.com/demos/demo.gif" alt="Run markdown interactively"/></a>
         </td>
       </tr>
     </tbody>
